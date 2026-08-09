@@ -5,7 +5,6 @@ let dbCache: any = null
 
 function loadDb() {
   if (dbCache) return dbCache
-  // Deep clone seedDbData to allow in-memory mutation per serverless instance
   dbCache = JSON.parse(JSON.stringify(seedDbData))
   return dbCache
 }
@@ -53,26 +52,65 @@ export default defineEventHandler(async (event) => {
     return db.branches
   }
 
-  // 📊 Dashboard
-  if (path === '/dashboard') {
+  // 📊 Dashboard Endpoints
+  if (path === '/dashboard' || path === '/dashboard/summary') {
     const todaySales = db.sales.reduce((sum: number, s: any) => sum + (s.total || 0), 0)
     const totalDebt = db.clients.reduce((sum: number, c: any) => sum + (c.debt || 0), 0)
+    const totalSupplierDebt = db.suppliers.reduce((sum: number, s: any) => sum + (s.debt || 0), 0)
     const totalExpense = db.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0)
     const totalStockHeads = db.stocks.reduce((sum: number, st: any) => sum + (st.heads || 0), 0)
     const totalStockKg = db.stocks.reduce((sum: number, st: any) => sum + (st.kg || 0), 0)
 
     return {
-      todaySalesCount: db.sales.length,
-      todaySalesTotal: todaySales,
+      date: new Date().toISOString().split('T')[0],
+      todaySales: db.sales.length,
       todayRevenue: todaySales,
       todayExpense: totalExpense,
-      totalClientDebt: totalDebt,
+      totalDebt: totalDebt,
+      totalSupplierDebt: totalSupplierDebt,
+      productCount: db.products.length,
+      totalHeads: totalStockHeads,
+      totalKg: totalStockKg,
+      lowStock: 0,
+      todaySalesCount: db.sales.length,
+      todaySalesTotal: todaySales,
       stockSummary: {
         typesCount: db.products.length,
         totalHeads: totalStockHeads,
         totalKg: totalStockKg
       },
       recentSales: db.sales.slice(0, 5)
+    }
+  }
+
+  if (path === '/dashboard/recent') {
+    return {
+      sales: db.sales,
+      purchases: db.purchases,
+      transfers: db.transfers,
+      expenses: db.expenses
+    }
+  }
+
+  if (path === '/dashboard/advanced') {
+    return {
+      salesByBranch: [
+        { branch: "Central ស្ទឹងមានជ័យ", sales: 1300, paid: 1150, credit: 150 },
+        { branch: "អូរឫស្សី", sales: 200, paid: 0, credit: 200 },
+        { branch: "ផ្សារដើមគរ", sales: 700, paid: 700, credit: 0 }
+      ],
+      salesByDay: [
+        { date: "2026-08-01", sales: 1000, expense: 40 },
+        { date: "2026-08-02", sales: 1200, expense: 40 }
+      ],
+      paymentStatusCounts: { paid: 2, partial: 1, credit: 2 },
+      cashBank: { cash: 2500, bank: 1200 },
+      stockByBranch: [
+        { branch: "Central ស្ទឹងមានជ័យ", heads: 1650, kg: 4125 },
+        { branch: "អូរឫស្សី", heads: 700, kg: 1750 },
+        { branch: "ផ្សារដើមគរ", heads: 590, "kg": 1475 }
+      ],
+      topDebtors: db.clients.filter((c: any) => c.debt > 0)
     }
   }
 

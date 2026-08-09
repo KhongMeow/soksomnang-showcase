@@ -10,6 +10,14 @@ export default defineNuxtConfig({
       apiBase: process.env.NUXT_PUBLIC_API_BASE || "/api",
     },
   },
+  routeRules: {
+    "/**": {
+      headers: {
+        "X-Frame-Options": "SAMEORIGIN",
+        "Access-Control-Allow-Origin": "*",
+      },
+    },
+  },
   vite: {
     plugins: [tailwindcss()],
   },
