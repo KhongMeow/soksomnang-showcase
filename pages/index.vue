@@ -1,7 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: false })
 
-const { login, isLoggedIn, role } = useAuth()
+const { login, isLoggedIn, role, user } = useAuth()
 
 type DisplayMode = "side" | "desktop" | "mobile"
 type Category = "all" | "auth" | "sales" | "stock" | "purchasing" | "finance"
@@ -160,6 +160,13 @@ const categories = [
   { id: "finance", name: "📊 ចំណាយ & របាយការណ៍" },
 ]
 
+const userProfiles = [
+  { username: "admin", pass: "admin", label: "👑 Admin (គ្រប់សាខា)", color: "bg-[#00b4c8]" },
+  { username: "staff", pass: "staff", label: "🏬 Central ស្ទឹងមានជ័យ", color: "bg-emerald-600" },
+  { username: "staff1", pass: "staff", label: "🏬 អូរឫស្សី", color: "bg-cyan-600" },
+  { username: "staff2", pass: "staff", label: "🏬 ផ្សារដើមគរ", color: "bg-teal-600" },
+]
+
 const filteredScreens = computed(() => {
   if (selectedCategory.value === "all") return screens
   return screens.filter((s) => s.category === selectedCategory.value)
@@ -171,26 +178,14 @@ const activeScreen = computed(() => {
 
 onMounted(async () => {
   if (!isLoggedIn.value) {
-    await switchToAdmin()
+    await switchToUser("admin", "admin")
   }
 })
 
-async function switchToAdmin() {
+async function switchToUser(u: string, p: string) {
   isLoadingAuth.value = true
   try {
-    await login("admin", "admin")
-    refreshFrames()
-  } catch (e) {
-    console.error(e)
-  } finally {
-    isLoadingAuth.value = false
-  }
-}
-
-async function switchToStaff() {
-  isLoadingAuth.value = true
-  try {
-    await login("staff", "staff")
+    await login(u, p)
     refreshFrames()
   } catch (e) {
     console.error(e)
@@ -219,36 +214,34 @@ function refreshFrames() {
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-base font-extrabold text-white">
-              Soksomnang Real Code Prototype Showcase
+              Soksomnang Real Code Showcase
             </h1>
             <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
-              ⚡ LIVE CODE UI (JSON DB)
+              ⚡ LIVE CODE (3 BRANCHES)
             </span>
           </div>
           <p class="text-xs text-cyan-300">
-            Standalone Vercel App · Desktop & Mobile Live Frames
+            Standalone Vercel App · Admin & Staff 1/2/3 Logged-In Demo
           </p>
         </div>
       </div>
 
-      <!-- Live Role Switcher -->
-      <div class="flex items-center gap-2 bg-[#040a14] px-3 py-1.5 rounded-xl border border-white/10">
-        <span class="text-xs text-gray-300 font-semibold">Switch Role:</span>
+      <!-- Live User & Branch Switcher -->
+      <div class="flex flex-wrap items-center gap-1.5 bg-[#040a14] p-1.5 rounded-xl border border-white/10">
+        <span class="text-xs text-gray-300 font-semibold px-1">Switch User:</span>
         <button
-          @click="switchToAdmin"
+          v-for="prof in userProfiles"
+          :key="prof.username"
+          @click="switchToUser(prof.username, prof.pass)"
           :disabled="isLoadingAuth"
-          class="px-3 py-1 rounded-lg text-xs font-bold transition-all"
-          :class="role === 'admin' ? 'bg-[#00b4c8] text-white shadow' : 'bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white'"
+          class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+          :class="
+            user?.username === prof.username
+              ? 'bg-[#00b4c8] text-white shadow-md ring-2 ring-cyan-300/40'
+              : 'bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white'
+          "
         >
-          👑 Admin
-        </button>
-        <button
-          @click="switchToStaff"
-          :disabled="isLoadingAuth"
-          class="px-3 py-1 rounded-lg text-xs font-bold transition-all"
-          :class="role === 'sale_staff' ? 'bg-[#00b4c8] text-white shadow' : 'bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white'"
-        >
-          👤 Staff
+          {{ prof.label }}
         </button>
       </div>
 
@@ -347,8 +340,11 @@ function refreshFrames() {
         <span class="text-xs text-gray-300">({{ activeScreen.description }})</span>
       </div>
 
-      <div class="text-xs font-mono text-cyan-300 bg-black/40 px-3 py-1 rounded border border-white/10">
-        {{ activeScreen.route }}
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-300">Logged in as:</span>
+        <span class="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30">
+          👤 {{ user?.name || 'Admin' }} ({{ user?.username || 'admin' }})
+        </span>
       </div>
     </div>
 
@@ -371,7 +367,7 @@ function refreshFrames() {
             <span class="text-cyan-300 flex items-center gap-1.5">
               🖥️ Desktop Viewport (1440 × 900 Live Interactive Code UI)
             </span>
-            <span class="text-emerald-400">🟢 Standalone Vercel Serverless JSON DB</span>
+            <span class="text-emerald-400">🟢 Vercel Serverless JSON DB</span>
           </div>
 
           <!-- Desktop Frame Container -->

@@ -28,10 +28,52 @@
     {
       "id": "u2",
       "username": "staff",
-      "passwordHash": "$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQOEg6Lruj3vjPGga31lW",
-      "name": "Sale Staff",
+      "passwordHash": "staff",
+      "name": "Sale Staff (Central)",
       "role": "sale_staff",
       "branchId": "b1",
+      "permissions": {
+        "create_sale": true,
+        "edit_price": false,
+        "receive_payment": true,
+        "view_cost": false,
+        "view_profit": false,
+        "adjust_stock": false,
+        "transfer_stock": false,
+        "view_reports": true,
+        "manage_settings": false,
+        "cancel_transaction": false,
+        "manage_branch": true
+      }
+    },
+    {
+      "id": "u3",
+      "username": "staff1",
+      "passwordHash": "staff",
+      "name": "Sale Staff 2 (អូរឫស្សី)",
+      "role": "sale_staff",
+      "branchId": "b2",
+      "permissions": {
+        "create_sale": true,
+        "edit_price": false,
+        "receive_payment": true,
+        "view_cost": false,
+        "view_profit": false,
+        "adjust_stock": false,
+        "transfer_stock": false,
+        "view_reports": true,
+        "manage_settings": false,
+        "cancel_transaction": false,
+        "manage_branch": true
+      }
+    },
+    {
+      "id": "u4",
+      "username": "staff2",
+      "passwordHash": "staff",
+      "name": "Sale Staff 3 (ផ្សារដើមគរ)",
+      "role": "sale_staff",
+      "branchId": "b3",
       "permissions": {
         "create_sale": true,
         "edit_price": false,
