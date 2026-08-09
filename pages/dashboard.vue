@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Role, Branch, Product, Client, Supplier, Sale, Purchase, StockTransfer, Expense } from "~/utils/data"
-import { BarChart, DonutChart, AreaChart, DonutType, LegendPosition } from "vue-chrts"
 
 definePageMeta({ middleware: "auth" })
 
@@ -365,40 +364,12 @@ const todayLabel = computed(() => summary.value.date)
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <SectionLabel>ការលក់តាមសាខា</SectionLabel>
-          <ClientOnly>
-            <BarChart
-              :data="salesByBranchData"
-              :categories="{
-                sales: { name: 'ចំណូល', color: '#0f2a4a' },
-                paid: { name: 'បង់រួច', color: '#16a34a' },
-                credit: { name: 'ជំពាក់', color: '#dc2626' },
-              }"
-              :y-axis="['sales', 'paid', 'credit']"
-              x-axis="branch"
-              :height="280"
-              :hide-legend="false"
-              :radius="4"
-              :legend-position="LegendPosition.BottomCenter"
-            />
-          </ClientOnly>
+          <SimpleBarChart :data="salesByBranchData" />
         </Card>
 
         <Card>
           <SectionLabel>ស្ថានភាពបង់ប្រាក់</SectionLabel>
-          <ClientOnly>
-            <DonutChart
-              :data="paymentStatusData"
-              :categories="{
-                paid: { name: 'បង់រួច', color: '#16a34a' },
-                partial: { name: 'បង់ខ្លះ', color: '#ea580c' },
-                credit: { name: 'ជំពាក់', color: '#dc2626' },
-              }"
-              :radius="120"
-              :height="280"
-              :hide-legend="false"
-              :legend-position="LegendPosition.BottomCenter"
-            />
-          </ClientOnly>
+          <SimpleDonutChart :data="paymentStatusData" />
         </Card>
       </div>
 
@@ -531,19 +502,7 @@ const todayLabel = computed(() => summary.value.date)
       <!-- Sales Trend -->
       <Card>
         <SectionLabel>និន្នាការលក់ (សប្ដាហ៍នេះ)</SectionLabel>
-        <BarChart
-          :data="salesByDayData"
-          :categories="{
-            sales: { name: 'ចំណូល', color: '#0f2a4a' },
-            expense: { name: 'ចំណាយ', color: '#ea580c' },
-          }"
-          :y-axis="['sales', 'expense']"
-          x-axis="date"
-          :height="280"
-          :hide-legend="false"
-          :radius="4"
-          :legend-position="LegendPosition.BottomCenter"
-        />
+        <SimpleBarChart :data="salesByDayData" />
       </Card>
     </div>
 
