@@ -1,7 +1,12 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   const { isLoggedIn, user, fetchMe, logout } = useAuth()
 
-  if (!isLoggedIn.value && to.path !== "/login" && to.path !== "/showcase") {
+  // Allow root showcase and login routes publicly
+  if (to.path === "/" || to.path === "/showcase") {
+    return
+  }
+
+  if (!isLoggedIn.value && to.path !== "/login") {
     return navigateTo("/login")
   }
 

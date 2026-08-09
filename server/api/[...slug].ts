@@ -1,126 +1,13 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { resolve } from 'path'
+import seedDbData from '../data/db.json'
 
-// In-memory / file JSON database engine
+// In-memory JSON database engine for Vercel Serverless Functions
 let dbCache: any = null
-
-function getDbPath() {
-  return resolve(process.cwd(), 'server/data/db.json')
-}
 
 function loadDb() {
   if (dbCache) return dbCache
-  try {
-    const filePath = getDbPath()
-    if (existsSync(filePath)) {
-      const content = readFileSync(filePath, 'utf-8')
-      dbCache = JSON.parse(content)
-      return dbCache
-    }
-  } catch (e) {
-    console.error('Error loading db.json:', e)
-  }
-
-  // Fallback initial database state
-  dbCache = {
-    branches: [
-      { id: "b1", name: "Central ស្ទឹងមានជ័យ" },
-      { id: "b2", name: "អូរឫស្សី" },
-      { id: "b3", name: "ផ្សារដើមគរ" }
-    ],
-    users: [
-      {
-        id: "u1",
-        username: "admin",
-        passwordHash: "admin",
-        name: "Admin",
-        role: "admin",
-        branchId: null,
-        permissions: {
-          create_sale: true, edit_price: true, receive_payment: true, view_cost: true, view_profit: true, adjust_stock: true, transfer_stock: true, view_reports: true, manage_settings: true, cancel_transaction: true
-        }
-      },
-      {
-        id: "u2",
-        username: "staff",
-        passwordHash: "staff",
-        name: "Sale Staff",
-        role: "sale_staff",
-        branchId: "b1",
-        permissions: {
-          create_sale: true, edit_price: false, receive_payment: true, view_cost: false, view_profit: false, adjust_stock: false, transfer_stock: false, view_reports: true, manage_settings: false, cancel_transaction: false, manage_branch: true
-        }
-      }
-    ],
-    products: [
-      { id: "p1", name: "មាន់ស្រែ", defaultPrice: 8 },
-      { id: "p2", name: "មាន់សាច់", defaultPrice: 6 },
-      { id: "p3", name: "មាន់ទា", defaultPrice: 7 },
-      { id: "p4", name: "មាន់រស់", defaultPrice: 5 }
-    ],
-    stocks: [
-      { id: "st1", productId: "p1", branchId: "b1", heads: 450, kg: 1125 },
-      { id: "st2", productId: "p1", branchId: "b2", heads: 200, kg: 500 },
-      { id: "st3", productId: "p1", branchId: "b3", heads: 180, kg: 450 },
-      { id: "st4", productId: "p2", branchId: "b1", heads: 320, kg: 800 },
-      { id: "st5", productId: "p2", branchId: "b2", heads: 150, kg: 375 },
-      { id: "st6", productId: "p2", branchId: "b3", heads: 120, kg: 300 }
-    ],
-    suppliers: [
-      { id: "s1", name: "Supplier A", phone: "012 345 678", debt: 2500, totalPurchase: 15000 },
-      { id: "s2", name: "កសិដ្ឋាន សុខា", phone: "077 123 456", debt: 1800, totalPurchase: 12000 }
-    ],
-    clients: [
-      { id: "c1", name: "ម៉ូយ ចាន់ណា", phone: "012 111 222", debt: 1500, invoices: 2, lastPayment: "2026-07-28" },
-      { id: "c2", name: "ម៉ូយ ស្រីពៅ", phone: "077 333 444", debt: 800, invoices: 1, lastPayment: "2026-07-30" },
-      { id: "c3", name: "ហាង សំណាង", phone: "096 555 666", debt: 3200, invoices: 3, lastPayment: "2026-07-25" }
-    ],
-    clientInvoices: [
-      { id: "ci1", clientId: "c1", invoiceNo: "INV-0795", date: "2026-07-25", product: "មាន់ស្រែ", total: 800, paid: 300, remaining: 500, status: "partial" },
-      { id: "ci2", clientId: "c1", invoiceNo: "INV-0790", date: "2026-07-20", product: "មាន់រស់", total: 1000, paid: 0, remaining: 1000, status: "credit" }
-    ],
-    sales: [
-      { id: "sl1", invoiceNo: "INV-0801", date: "2026-08-02", client: "ម៉ូយ ចាន់ណា", product: "មាន់ស្រែ", unit: "taka", qty: 2, price: 500, total: 1000, status: "paid", paid: 1000, remaining: 0, branch: "Central ស្ទឹងមានជ័យ", staff: "ដារ៉ា", method: "cash" },
-      { id: "sl2", invoiceNo: "INV-0800", date: "2026-08-02", client: "ហាង សំណាង", product: "មាន់សាច់", unit: "kg", qty: 50, price: 4, total: 200, status: "credit", paid: 0, remaining: 200, branch: "អូរឫស្សី", staff: "សំណាង", method: "cash" }
-    ],
-    purchases: [
-      { id: "pur1", invoiceNo: "PUR-0201", date: "2026-08-02", supplier: "Supplier A", product: "មាន់ស្រែ", heads: 200, kg: 400, total: 1000, status: "paid", paid: 1000, remaining: 0, branch: "Central ស្ទឹងមានជ័យ" }
-    ],
-    purchaseRequests: [
-      { id: "pr1", requestNo: "PR-001", date: "2026-08-02", branch: "អូរឫស្សី", staff: "Sale Staff 2", product: "មាន់ស្រែ", heads: 100, kg: 250, reason: "ស្តុកជិតអស់", status: "pending" }
-    ],
-    transfers: [
-      { id: "trf1", transferNo: "TRF-0101", date: "2026-08-02", from: "Central ស្ទឹងមានជ័យ", to: "អូរឫស្សី", product: "មាន់ស្រែ", heads: 50, kg: 125, status: "received" }
-    ],
-    adjustments: [
-      { id: "adj1", date: "2026-08-01", product: "មាន់រស់", branch: "Central ស្ទឹងមានជ័យ", type: "dead", headsBefore: 600, headsAdjustment: -5, headsAfter: 595, kgBefore: 1500, kgAdjustment: -12.5, kgAfter: 1487.5, reason: "ងាប់ក្នុងការដឹក" }
-    ],
-    expenses: [
-      { id: "exp1", date: "2026-08-02", category: "ថ្លៃដឹក", description: "ដឹកមាន់ Central → អូរឫស្សី", amount: 25, method: "cash", branch: "Central ស្ទឹងមានជ័យ" }
-    ],
-    payments: [
-      { id: "pay1", receiptNo: "REC-0301", date: "2026-08-02", type: "client", party: "ម៉ូយ ចាន់ណា", invoiceNo: "INV-0795", amount: 300, method: "cash", remainingAfter: 500 }
-    ],
-    settings: {
-      headsPerTaka: 100,
-      expenseCategories: ["ថ្លៃដឹក", "ម្ហូបអាហារ", "ប្រេងឥន្ធនៈ", "ផ្សេងៗ"]
-    },
-    priceMatrix: [
-      { product: "មាន់ស្រែ", centralSelling: 500, centralClient: 480, orusseySelling: 520, orusseyClient: 500, deimkorSelling: 510, deimkorClient: 490 },
-      { product: "មាន់សាច់", centralSelling: 420, centralClient: 400, orusseySelling: 440, orusseyClient: 420, deimkorSelling: 430, deimkorClient: 410 }
-    ]
-  }
+  // Deep clone seedDbData to allow in-memory mutation per serverless instance
+  dbCache = JSON.parse(JSON.stringify(seedDbData))
   return dbCache
-}
-
-function saveDb() {
-  try {
-    const filePath = getDbPath()
-    writeFileSync(filePath, JSON.stringify(dbCache, null, 2), 'utf-8')
-  } catch (e) {
-    // In serverless read-only environments, keep in memory cache
-    console.warn('Db save notice (in-memory update):', e)
-  }
 }
 
 export default defineEventHandler(async (event) => {
@@ -213,7 +100,6 @@ export default defineEventHandler(async (event) => {
         lastPayment: new Date().toISOString().split('T')[0]
       }
       db.clients.push(newClient)
-      saveDb()
       return newClient
     }
     return db.clients
@@ -231,7 +117,6 @@ export default defineEventHandler(async (event) => {
         totalPurchase: 0
       }
       db.suppliers.push(newSup)
-      saveDb()
       return newSup
     }
     return db.suppliers
@@ -251,7 +136,6 @@ export default defineEventHandler(async (event) => {
       }
       db.sales.unshift(newSale)
 
-      // Update client debt if credit
       if (newSale.remaining > 0 && body.client) {
         const clientObj = db.clients.find((c: any) => c.name === body.client)
         if (clientObj) {
@@ -259,7 +143,6 @@ export default defineEventHandler(async (event) => {
           clientObj.invoices = (clientObj.invoices || 0) + 1
         }
       }
-      saveDb()
       return newSale
     }
     return db.sales
@@ -276,7 +159,6 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.purchases.unshift(newPur)
-      saveDb()
       return newPur
     }
     return db.purchases
@@ -294,7 +176,6 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.purchaseRequests.unshift(newReq)
-      saveDb()
       return newReq
     }
     if (method === 'PATCH') {
@@ -303,7 +184,6 @@ export default defineEventHandler(async (event) => {
       const reqObj = db.purchaseRequests.find((r: any) => r.id === reqId)
       if (reqObj) {
         reqObj.status = body.status
-        saveDb()
         return reqObj
       }
     }
@@ -322,7 +202,6 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.transfers.unshift(newTrf)
-      saveDb()
       return newTrf
     }
     return db.transfers
@@ -338,7 +217,6 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.adjustments.unshift(newAdj)
-      saveDb()
       return newAdj
     }
     return db.adjustments
@@ -354,7 +232,6 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.expenses.unshift(newExp)
-      saveDb()
       return newExp
     }
     return db.expenses
@@ -371,7 +248,6 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.payments.unshift(newPay)
-      saveDb()
       return newPay
     }
     return db.payments
@@ -382,7 +258,6 @@ export default defineEventHandler(async (event) => {
     if (method === 'PUT' || method === 'POST') {
       const body = await readBody(event)
       db.settings = { ...db.settings, ...body }
-      saveDb()
       return db.settings
     }
     return db.settings
@@ -402,6 +277,5 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Default response for unhandled endpoints
-  return { message: 'Mock API Server Operational', path }
+  return { message: 'Vercel Serverless JSON API Engine Active', path }
 })
