@@ -4,6 +4,7 @@ const route = useRoute()
 const router = useRouter()
 const api = useApi()
 const sidebarOpen = ref(false)
+const showCommentDrawer = ref(false)
 const prStore = usePurchaseRequestsStore()
 
 const canReviewRequests = computed(() => !!role.value)
@@ -295,6 +296,31 @@ watch(() => route.path, () => {
         </button>
       </div>
     </nav>
+
+    <!-- Floating Page Comment Button -->
+    <div class="fixed bottom-20 lg:bottom-6 left-4 lg:left-6 z-40">
+      <button
+        @click="showCommentDrawer = !showCommentDrawer"
+        class="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#0f2a4a] text-white shadow-xl hover:bg-[#1a4a7a] transition-all border border-cyan-400/40 text-xs font-bold"
+      >
+        <span class="text-base">💬</span>
+        <span>មតិយោបល់</span>
+      </button>
+    </div>
+
+    <!-- Floating Comment Modal Overlay -->
+    <Transition name="fade">
+      <div v-if="showCommentDrawer" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" @click.self="showCommentDrawer = false">
+        <div class="w-full max-w-lg max-h-[85vh] overflow-y-auto">
+          <div class="flex justify-end pb-2">
+            <button @click="showCommentDrawer = false" class="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold hover:bg-white/30">
+              ✕ បិទ (Close)
+            </button>
+          </div>
+          <PageCommentWidget :route="route.path" :screen-title="route.path" />
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 

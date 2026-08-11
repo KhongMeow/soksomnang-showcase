@@ -1,12 +1,26 @@
 import seedDbData from '../data/db.json'
+import fs from 'node:fs'
+import { resolve } from 'node:path'
 
-// In-memory JSON database engine for Vercel Serverless Functions
+// In-memory JSON database engine with disk persistence for local dev and serverless fallback
 let dbCache: any = null
 
 function loadDb() {
   if (dbCache) return dbCache
   dbCache = JSON.parse(JSON.stringify(seedDbData))
   return dbCache
+}
+
+function saveDb(data: any) {
+  dbCache = data
+  try {
+    const dbPath = resolve(process.cwd(), 'server/data/db.json')
+    if (fs.existsSync(dbPath)) {
+      fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), 'utf-8')
+    }
+  } catch (e) {
+    // In serverless read-only environment, in-memory cache remains active
+  }
 }
 
 export default defineEventHandler(async (event) => {
@@ -138,6 +152,7 @@ export default defineEventHandler(async (event) => {
         lastPayment: new Date().toISOString().split('T')[0]
       }
       db.clients.push(newClient)
+      saveDb(db)
       return newClient
     }
     return db.clients
@@ -155,6 +170,7 @@ export default defineEventHandler(async (event) => {
         totalPurchase: 0
       }
       db.suppliers.push(newSup)
+      saveDb(db)
       return newSup
     }
     return db.suppliers
@@ -181,6 +197,7 @@ export default defineEventHandler(async (event) => {
           clientObj.invoices = (clientObj.invoices || 0) + 1
         }
       }
+      saveDb(db)
       return newSale
     }
     return db.sales
@@ -197,6 +214,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.purchases.unshift(newPur)
+      saveDb(db)
       return newPur
     }
     return db.purchases
@@ -214,6 +232,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.purchaseRequests.unshift(newReq)
+      saveDb(db)
       return newReq
     }
     if (method === 'PATCH') {
@@ -222,6 +241,7 @@ export default defineEventHandler(async (event) => {
       const reqObj = db.purchaseRequests.find((r: any) => r.id === reqId)
       if (reqObj) {
         reqObj.status = body.status
+        saveDb(db)
         return reqObj
       }
     }
@@ -240,6 +260,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.transfers.unshift(newTrf)
+      saveDb(db)
       return newTrf
     }
     return db.transfers
@@ -255,6 +276,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.adjustments.unshift(newAdj)
+      saveDb(db)
       return newAdj
     }
     return db.adjustments
@@ -270,6 +292,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.expenses.unshift(newExp)
+      saveDb(db)
       return newExp
     }
     return db.expenses
@@ -286,6 +309,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.payments.unshift(newPay)
+      saveDb(db)
       return newPay
     }
     return db.payments
@@ -296,6 +320,7 @@ export default defineEventHandler(async (event) => {
     if (method === 'PUT' || method === 'POST') {
       const body = await readBody(event)
       db.settings = { ...db.settings, ...body }
+      saveDb(db)
       return db.settings
     }
     return db.settings
@@ -313,6 +338,52 @@ export default defineEventHandler(async (event) => {
       sales: db.sales,
       expenses: db.expenses
     }
+  }
+
+  // 💬 Comments API
+  if (path === '/comments' || path.startsWith('/comments')) {
+    if (!db.comments) db.comments = []
+
+    if (path === '/comments/react' && method === 'POST') {
+      const body = await readBody(event)
+      const targetCm = db.comments.find((c: any) => c.id === body.commentId)
+      if (targetCm) {
+        if (!targetCm.reactions) targetCm.reactions = {}
+        const type = body.reactionType || 'thumbsup'
+        targetCm.reactions[type] = (targetCm.reactions[type] || 0) + 1
+        saveDb(db)
+        return targetCm
+      }
+      return { error: 'Comment not found' }
+    }
+
+    if (method === 'POST') {
+      const body = await readBody(event)
+      const newComment = {
+        id: `cm_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        screenId: body.screenId || 'general',
+        route: body.route || '/',
+        author: body.author || 'Guest Reviewer',
+        role: body.role || 'reviewer',
+        tag: body.tag || '💡 Suggestion',
+        text: body.text || '',
+        createdAt: new Date().toISOString(),
+        reactions: { thumbsup: 0, heart: 0 }
+      }
+      db.comments.unshift(newComment)
+      saveDb(db)
+      return newComment
+    }
+
+    const query = getQuery(event)
+    let results = [...db.comments]
+    if (query.screenId) {
+      results = results.filter((c: any) => c.screenId === query.screenId)
+    }
+    if (query.route) {
+      results = results.filter((c: any) => c.route === query.route)
+    }
+    return results
   }
 
   return { message: 'Vercel Serverless JSON API Engine Active', path }

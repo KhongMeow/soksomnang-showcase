@@ -377,38 +377,13 @@ const todayLabel = computed(() => summary.value.date)
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <SectionLabel>ចំណូល និងចំណាយ (សប្ដាហ៍នេះ)</SectionLabel>
-          <ClientOnly>
-            <AreaChart
-              :data="incomeVsExpenseData"
-              :categories="{
-                income: { name: 'ចំណូល', color: '#16a34a' },
-                expense: { name: 'ចំណាយ', color: '#ea580c' },
-              }"
-              :y-axis="['income', 'expense']"
-              x-axis="date"
-              :height="280"
-              :hide-legend="false"
-              :legend-position="LegendPosition.BottomCenter"
-            />
-          </ClientOnly>
+          <SimpleAreaChart :data="incomeVsExpenseData" />
         </Card>
 
         <Card>
           <SectionLabel>Cash vs Bank</SectionLabel>
           <div class="flex items-center gap-6">
-            <ClientOnly>
-              <DonutChart
-                :data="cashBankData"
-                :categories="{
-                  cash: { name: 'Cash', color: '#16a34a' },
-                  bank: { name: 'Bank', color: '#0097a7' },
-                }"
-                :radius="110"
-                :height="250"
-                :hide-legend="false"
-                :legend-position="LegendPosition.BottomCenter"
-              />
-            </ClientOnly>
+            <SimpleDonutChart :data="cashBankData" :labels="['Cash', 'Bank']" :colors="['#16a34a', '#0097a7']" />
             <div class="flex-1 space-y-3">
               <div class="bg-[#dcfce7] rounded-xl p-3">
                 <div class="text-2xl font-bold text-[#15803d]">${{ cashValue.toLocaleString() }}</div>

@@ -2,8 +2,9 @@
 definePageMeta({ layout: false })
 
 const { login, isLoggedIn, role, user } = useAuth()
+const api = useApi()
 
-type DisplayMode = "side" | "desktop" | "mobile"
+type DisplayMode = "side" | "desktop" | "mobile" | "comments"
 type Category = "all" | "auth" | "sales" | "stock" | "purchasing" | "finance"
 
 const displayMode = ref<DisplayMode>("side")
@@ -11,6 +12,14 @@ const selectedCategory = ref<Category>("all")
 const activeScreenId = ref<string>("admin-dashboard")
 const isLoadingAuth = ref(false)
 const iframeKey = ref(0)
+const showCommentsSection = ref(true)
+const commentCounts = ref<Record<string, number>>({})
+
+const desktopIframeRef = ref<HTMLIFrameElement | null>(null)
+const mobileIframeRef = ref<HTMLIFrameElement | null>(null)
+const currentIframeRoute = ref<string>("/dashboard")
+
+let routeTrackerTimer: ReturnType<typeof setInterval> | null = null
 
 const screens = [
   {
@@ -180,7 +189,56 @@ onMounted(async () => {
   if (!isLoggedIn.value) {
     await switchToUser("admin", "admin")
   }
+  fetchCommentCounts()
+  routeTrackerTimer = setInterval(trackIframeRoute, 600)
 })
+
+onUnmounted(() => {
+  if (routeTrackerTimer) clearInterval(routeTrackerTimer)
+})
+
+function trackIframeRoute() {
+  try {
+    const desktopWin = desktopIframeRef.value?.contentWindow
+    const mobileWin = mobileIframeRef.value?.contentWindow
+
+    const desktopPath = desktopWin?.location?.pathname
+    const mobilePath = mobileWin?.location?.pathname
+
+    // 1. Check if Mobile Frame navigated
+    if (mobilePath && mobilePath !== "about:blank" && mobilePath !== currentIframeRoute.value) {
+      currentIframeRoute.value = mobilePath
+      const matched = screens.find((s) => s.route === mobilePath)
+      if (matched && matched.id !== activeScreenId.value) {
+        activeScreenId.value = matched.id
+      }
+    }
+    // 2. Check if Desktop Frame navigated
+    else if (desktopPath && desktopPath !== "about:blank" && desktopPath !== currentIframeRoute.value) {
+      currentIframeRoute.value = desktopPath
+      const matched = screens.find((s) => s.route === desktopPath)
+      if (matched && matched.id !== activeScreenId.value) {
+        activeScreenId.value = matched.id
+      }
+    }
+  } catch {
+    // Ignore cross-origin errors if any
+  }
+}
+
+async function fetchCommentCounts() {
+  try {
+    const list = await api.get<any[]>("/comments")
+    const map: Record<string, number> = {}
+    list.forEach((c) => {
+      if (c.screenId) map[c.screenId] = (map[c.screenId] || 0) + 1
+      if (c.route) map[c.route] = (map[c.route] || 0) + 1
+    })
+    commentCounts.value = map
+  } catch (e) {
+    console.error(e)
+  }
+}
 
 async function switchToUser(u: string, p: string) {
   isLoadingAuth.value = true
@@ -191,6 +249,30 @@ async function switchToUser(u: string, p: string) {
     console.error(e)
   } finally {
     isLoadingAuth.value = false
+  }
+}
+
+function selectScreen(s: typeof screens[0]) {
+  activeScreenId.value = s.id
+  currentIframeRoute.value = s.route
+
+  try {
+    const desktopWin = desktopIframeRef.value?.contentWindow as any
+    const mobileWin = mobileIframeRef.value?.contentWindow as any
+
+    if (desktopWin?.__nuxt_router__) {
+      desktopWin.__nuxt_router__.push(s.route)
+    } else if (desktopWin?.location) {
+      desktopWin.location.href = s.route
+    }
+
+    if (mobileWin?.__nuxt_router__) {
+      mobileWin.__nuxt_router__.push(s.route)
+    } else if (mobileWin?.location) {
+      mobileWin.location.href = s.route
+    }
+  } catch (e) {
+    console.error(e)
   }
 }
 
@@ -221,7 +303,7 @@ function refreshFrames() {
             </span>
           </div>
           <p class="text-xs text-cyan-300">
-            Standalone Vercel App · Admin & Staff 1/2/3 Logged-In Demo
+            Standalone Vercel App · Dynamic Page Route & Comment Tracking 💬
           </p>
         </div>
       </div>
@@ -273,13 +355,20 @@ function refreshFrames() {
       <!-- Action Buttons -->
       <div class="flex items-center gap-2">
         <button
+          @click="showCommentsSection = !showCommentsSection"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5"
+          :class="showCommentsSection ? 'bg-cyan-600 text-white border-cyan-400 shadow' : 'bg-white/10 text-gray-200 border-white/10 hover:bg-white/20'"
+        >
+          <span>💬 មតិយោបល់ (Comments)</span>
+        </button>
+        <button
           @click="refreshFrames"
           class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all"
         >
           🔄 Reload UI
         </button>
         <a
-          :href="activeScreen.route"
+          :href="currentIframeRoute"
           target="_blank"
           class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow"
         >
@@ -312,7 +401,7 @@ function refreshFrames() {
         <button
           v-for="s in filteredScreens"
           :key="s.id"
-          @click="activeScreenId = s.id"
+          @click="selectScreen(s)"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border"
           :class="
             activeScreenId === s.id
@@ -321,6 +410,12 @@ function refreshFrames() {
           "
         >
           <span>{{ s.title }}</span>
+          <span
+            v-if="commentCounts[s.id] || commentCounts[s.route]"
+            class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-cyan-500 text-white"
+          >
+            💬 {{ commentCounts[s.id] || commentCounts[s.route] }}
+          </span>
           <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-black/50 text-cyan-300">
             {{ s.route }}
           </span>
@@ -340,8 +435,10 @@ function refreshFrames() {
         <span class="text-xs text-gray-300">({{ activeScreen.description }})</span>
       </div>
 
-      <div class="flex items-center gap-2">
-        <span class="text-xs text-gray-300">Logged in as:</span>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-cyan-300 bg-black/40 px-2.5 py-1 rounded font-mono border border-white/10">
+          Current Route: {{ currentIframeRoute }}
+        </span>
         <span class="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30">
           👤 {{ user?.name || 'Admin' }} ({{ user?.username || 'admin' }})
         </span>
@@ -361,11 +458,11 @@ function refreshFrames() {
         <div
           v-if="displayMode === 'side' || displayMode === 'desktop'"
           class="space-y-2"
-          :class="displayMode === 'side' ? 'lg:col-span-8' : 'w-full'"
+          :class="displayMode === 'side' ? (showCommentsSection ? 'lg:col-span-5' : 'lg:col-span-8') : 'w-full'"
         >
           <div class="flex items-center justify-between text-xs text-gray-300 font-bold px-1">
             <span class="text-cyan-300 flex items-center gap-1.5">
-              🖥️ Desktop Viewport (1440 × 900 Live Interactive Code UI)
+              🖥️ Desktop Viewport (Live Interactive Code UI)
             </span>
             <span class="text-emerald-400">🟢 Vercel Serverless JSON DB</span>
           </div>
@@ -380,7 +477,7 @@ function refreshFrames() {
                 <div class="w-3 h-3 rounded-full bg-green-500" />
               </div>
               <div class="px-4 py-0.5 rounded bg-[#1e2d42] text-xs font-mono text-cyan-200 w-full max-w-sm text-center border border-white/10 truncate">
-                {{ activeScreen.route }}
+                {{ currentIframeRoute }}
               </div>
               <div class="text-[11px] font-mono text-gray-400">Desktop Widescreen</div>
             </div>
@@ -388,7 +485,8 @@ function refreshFrames() {
             <!-- Desktop Live Iframe -->
             <div class="w-full h-[720px] bg-white overflow-hidden">
               <iframe
-                :key="`desktop-${activeScreen.id}-${iframeKey}`"
+                ref="desktopIframeRef"
+                :key="`desktop-single-${iframeKey}`"
                 :src="activeScreen.route"
                 class="w-full h-full border-0 bg-white"
                 title="Desktop Live Code Frame"
@@ -401,13 +499,13 @@ function refreshFrames() {
         <div
           v-if="displayMode === 'side' || displayMode === 'mobile'"
           class="space-y-2"
-          :class="displayMode === 'side' ? 'lg:col-span-4' : 'max-w-[420px] mx-auto w-full'"
+          :class="displayMode === 'side' ? (showCommentsSection ? 'lg:col-span-3' : 'lg:col-span-4') : 'max-w-[420px] mx-auto w-full'"
         >
           <div class="flex items-center justify-between text-xs text-gray-300 font-bold px-1">
             <span class="text-cyan-300 flex items-center gap-1.5">
-              📱 Mobile Viewport (390 × 844 True Mobile Layout)
+              📱 Mobile Viewport (390 × 844)
             </span>
-            <span class="text-emerald-400">🟢 Responsive UI</span>
+            <span class="text-emerald-400">🟢 Responsive</span>
           </div>
 
           <!-- Phone Outer Frame -->
@@ -420,13 +518,27 @@ function refreshFrames() {
             <!-- Mobile Live Iframe Container -->
             <div class="rounded-[30px] overflow-hidden bg-white h-[740px] w-full relative shadow-inner">
               <iframe
-                :key="`mobile-${activeScreen.id}-${iframeKey}`"
+                ref="mobileIframeRef"
+                :key="`mobile-single-${iframeKey}`"
                 :src="activeScreen.route"
                 class="w-full h-full border-0 bg-white"
                 title="Mobile Live Code Frame"
               />
             </div>
           </div>
+        </div>
+
+        <!-- 💬 REALTIME COMMENTS SECTION FOR CURRENT ACTIVE ROUTE -->
+        <div
+          v-if="showCommentsSection"
+          class="space-y-2"
+          :class="displayMode === 'side' ? 'lg:col-span-4' : 'w-full'"
+        >
+          <PageCommentWidget
+            :screen-id="activeScreen.id"
+            :screen-title="activeScreen.title"
+            :route="currentIframeRoute"
+          />
         </div>
       </div>
     </main>

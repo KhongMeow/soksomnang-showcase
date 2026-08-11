@@ -22,6 +22,7 @@ export default defineNuxtConfig({
     plugins: [tailwindcss()],
   },
   app: {
+    pageTransition: { name: "page", mode: "out-in" },
     head: {
       title: "Soksomnang - ប្រព័ន្ធគ្រប់គ្រង",
       meta: [

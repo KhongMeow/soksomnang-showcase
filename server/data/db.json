@@ -1,8 +1,17 @@
 {
   "branches": [
-    { "id": "b1", "name": "Central ស្ទឹងមានជ័យ" },
-    { "id": "b2", "name": "អូរឫស្សី" },
-    { "id": "b3", "name": "ផ្សារដើមគរ" }
+    {
+      "id": "b1",
+      "name": "Central ស្ទឹងមានជ័យ"
+    },
+    {
+      "id": "b2",
+      "name": "អូរឫស្សី"
+    },
+    {
+      "id": "b3",
+      "name": "ផ្សារដើមគរ"
+    }
   ],
   "users": [
     {
@@ -90,79 +99,463 @@
     }
   ],
   "products": [
-    { "id": "p1", "name": "មាន់ស្រែ", "defaultPrice": 8 },
-    { "id": "p2", "name": "មាន់សាច់", "defaultPrice": 6 },
-    { "id": "p3", "name": "មាន់ទា", "defaultPrice": 7 },
-    { "id": "p4", "name": "មាន់រស់", "defaultPrice": 5 }
+    {
+      "id": "p1",
+      "name": "មាន់ស្រែ",
+      "defaultPrice": 8
+    },
+    {
+      "id": "p2",
+      "name": "មាន់សាច់",
+      "defaultPrice": 6
+    },
+    {
+      "id": "p3",
+      "name": "មាន់ទា",
+      "defaultPrice": 7
+    },
+    {
+      "id": "p4",
+      "name": "មាន់រស់",
+      "defaultPrice": 5
+    }
   ],
   "stocks": [
-    { "id": "st1", "productId": "p1", "branchId": "b1", "heads": 450, "kg": 1125 },
-    { "id": "st2", "productId": "p1", "branchId": "b2", "heads": 200, "kg": 500 },
-    { "id": "st3", "productId": "p1", "branchId": "b3", "heads": 180, "kg": 450 },
-    { "id": "st4", "productId": "p2", "branchId": "b1", "heads": 320, "kg": 800 },
-    { "id": "st5", "productId": "p2", "branchId": "b2", "heads": 150, "kg": 375 },
-    { "id": "st6", "productId": "p2", "branchId": "b3", "heads": 120, "kg": 300 },
-    { "id": "st7", "productId": "p3", "branchId": "b1", "heads": 280, "kg": 700 },
-    { "id": "st8", "productId": "p3", "branchId": "b2", "heads": 100, "kg": 250 },
-    { "id": "st9", "productId": "p3", "branchId": "b3", "heads": 90, "kg": 225 },
-    { "id": "st10", "productId": "p4", "branchId": "b1", "heads": 600, "kg": 1500 },
-    { "id": "st11", "productId": "p4", "branchId": "b2", "heads": 250, "kg": 625 },
-    { "id": "st12", "productId": "p4", "branchId": "b3", "heads": 200, "kg": 500 }
+    {
+      "id": "st1",
+      "productId": "p1",
+      "branchId": "b1",
+      "heads": 450,
+      "kg": 1125
+    },
+    {
+      "id": "st2",
+      "productId": "p1",
+      "branchId": "b2",
+      "heads": 200,
+      "kg": 500
+    },
+    {
+      "id": "st3",
+      "productId": "p1",
+      "branchId": "b3",
+      "heads": 180,
+      "kg": 450
+    },
+    {
+      "id": "st4",
+      "productId": "p2",
+      "branchId": "b1",
+      "heads": 320,
+      "kg": 800
+    },
+    {
+      "id": "st5",
+      "productId": "p2",
+      "branchId": "b2",
+      "heads": 150,
+      "kg": 375
+    },
+    {
+      "id": "st6",
+      "productId": "p2",
+      "branchId": "b3",
+      "heads": 120,
+      "kg": 300
+    },
+    {
+      "id": "st7",
+      "productId": "p3",
+      "branchId": "b1",
+      "heads": 280,
+      "kg": 700
+    },
+    {
+      "id": "st8",
+      "productId": "p3",
+      "branchId": "b2",
+      "heads": 100,
+      "kg": 250
+    },
+    {
+      "id": "st9",
+      "productId": "p3",
+      "branchId": "b3",
+      "heads": 90,
+      "kg": 225
+    },
+    {
+      "id": "st10",
+      "productId": "p4",
+      "branchId": "b1",
+      "heads": 600,
+      "kg": 1500
+    },
+    {
+      "id": "st11",
+      "productId": "p4",
+      "branchId": "b2",
+      "heads": 250,
+      "kg": 625
+    },
+    {
+      "id": "st12",
+      "productId": "p4",
+      "branchId": "b3",
+      "heads": 200,
+      "kg": 500
+    }
   ],
   "suppliers": [
-    { "id": "s1", "name": "Supplier A", "phone": "012 345 678", "debt": 2500, "totalPurchase": 15000 },
-    { "id": "s2", "name": "កសិដ្ឋាន សុខា", "phone": "077 123 456", "debt": 1800, "totalPurchase": 12000 },
-    { "id": "s3", "name": "កសិដ្ឋាន រតនា", "phone": "096 789 012", "debt": 0, "totalPurchase": 8500 }
+    {
+      "id": "s1",
+      "name": "Supplier A",
+      "phone": "012 345 678",
+      "debt": 2500,
+      "totalPurchase": 15000
+    },
+    {
+      "id": "s2",
+      "name": "កសិដ្ឋាន សុខា",
+      "phone": "077 123 456",
+      "debt": 1800,
+      "totalPurchase": 12000
+    },
+    {
+      "id": "s3",
+      "name": "កសិដ្ឋាន រតនា",
+      "phone": "096 789 012",
+      "debt": 0,
+      "totalPurchase": 8500
+    }
   ],
   "clients": [
-    { "id": "c1", "name": "ម៉ូយ ចាន់ណា", "phone": "012 111 222", "debt": 1500, "invoices": 2, "lastPayment": "2026-07-28" },
-    { "id": "c2", "name": "ម៉ូយ ស្រីពៅ", "phone": "077 333 444", "debt": 800, "invoices": 1, "lastPayment": "2026-07-30" },
-    { "id": "c3", "name": "ហាង សំណាង", "phone": "096 555 666", "debt": 3200, "invoices": 3, "lastPayment": "2026-07-25" },
-    { "id": "c4", "name": "ម៉ូយ វណ្ណា", "phone": "011 777 888", "debt": 0, "invoices": 0, "lastPayment": "2026-08-01" },
-    { "id": "c5", "name": "ហាង ចន្ទ", "phone": "078 999 000", "debt": 650, "invoices": 1, "lastPayment": "2026-07-29" }
+    {
+      "id": "c1",
+      "name": "ម៉ូយ ចាន់ណា",
+      "phone": "012 111 222",
+      "debt": 1500,
+      "invoices": 2,
+      "lastPayment": "2026-07-28"
+    },
+    {
+      "id": "c2",
+      "name": "ម៉ូយ ស្រីពៅ",
+      "phone": "077 333 444",
+      "debt": 800,
+      "invoices": 1,
+      "lastPayment": "2026-07-30"
+    },
+    {
+      "id": "c3",
+      "name": "ហាង សំណាង",
+      "phone": "096 555 666",
+      "debt": 3200,
+      "invoices": 3,
+      "lastPayment": "2026-07-25"
+    },
+    {
+      "id": "c4",
+      "name": "ម៉ូយ វណ្ណា",
+      "phone": "011 777 888",
+      "debt": 0,
+      "invoices": 0,
+      "lastPayment": "2026-08-01"
+    },
+    {
+      "id": "c5",
+      "name": "ហាង ចន្ទ",
+      "phone": "078 999 000",
+      "debt": 650,
+      "invoices": 1,
+      "lastPayment": "2026-07-29"
+    }
   ],
   "clientInvoices": [
-    { "id": "ci1", "clientId": "c1", "invoiceNo": "INV-0795", "date": "2026-07-25", "product": "មាន់ស្រែ", "total": 800, "paid": 300, "remaining": 500, "status": "partial" },
-    { "id": "ci2", "clientId": "c1", "invoiceNo": "INV-0790", "date": "2026-07-20", "product": "មាន់រស់", "total": 1000, "paid": 0, "remaining": 1000, "status": "credit" },
-    { "id": "ci3", "clientId": "c2", "invoiceNo": "INV-0798", "date": "2026-07-30", "product": "មាន់សាច់", "total": 800, "paid": 0, "remaining": 800, "status": "credit" },
-    { "id": "ci4", "clientId": "c3", "invoiceNo": "INV-0785", "date": "2026-07-15", "product": "មាន់ទា", "total": 1500, "paid": 300, "remaining": 1200, "status": "partial" },
-    { "id": "ci5", "clientId": "c5", "invoiceNo": "INV-0797", "date": "2026-07-29", "product": "មាន់ស្រែ", "total": 650, "paid": 0, "remaining": 650, "status": "credit" }
+    {
+      "id": "ci1",
+      "clientId": "c1",
+      "invoiceNo": "INV-0795",
+      "date": "2026-07-25",
+      "product": "មាន់ស្រែ",
+      "total": 800,
+      "paid": 300,
+      "remaining": 500,
+      "status": "partial"
+    },
+    {
+      "id": "ci2",
+      "clientId": "c1",
+      "invoiceNo": "INV-0790",
+      "date": "2026-07-20",
+      "product": "មាន់រស់",
+      "total": 1000,
+      "paid": 0,
+      "remaining": 1000,
+      "status": "credit"
+    },
+    {
+      "id": "ci3",
+      "clientId": "c2",
+      "invoiceNo": "INV-0798",
+      "date": "2026-07-30",
+      "product": "មាន់សាច់",
+      "total": 800,
+      "paid": 0,
+      "remaining": 800,
+      "status": "credit"
+    },
+    {
+      "id": "ci4",
+      "clientId": "c3",
+      "invoiceNo": "INV-0785",
+      "date": "2026-07-15",
+      "product": "មាន់ទា",
+      "total": 1500,
+      "paid": 300,
+      "remaining": 1200,
+      "status": "partial"
+    },
+    {
+      "id": "ci5",
+      "clientId": "c5",
+      "invoiceNo": "INV-0797",
+      "date": "2026-07-29",
+      "product": "មាន់ស្រែ",
+      "total": 650,
+      "paid": 0,
+      "remaining": 650,
+      "status": "credit"
+    }
   ],
   "sales": [
-    { "id": "sl1", "invoiceNo": "INV-0801", "date": "2026-08-02", "client": "ម៉ូយ ចាន់ណា", "product": "មាន់ស្រែ", "unit": "taka", "qty": 2, "price": 500, "total": 1000, "status": "paid", "paid": 1000, "remaining": 0, "branch": "Central ស្ទឹងមានជ័យ", "staff": "ដារ៉ា", "method": "cash" },
-    { "id": "sl2", "invoiceNo": "INV-0800", "date": "2026-08-02", "client": "ហាង សំណាង", "product": "មាន់សាច់", "unit": "kg", "qty": 50, "price": 4, "total": 200, "status": "credit", "paid": 0, "remaining": 200, "branch": "អូរឫស្សី", "staff": "សំណាង", "method": "cash" },
-    { "id": "sl3", "invoiceNo": "INV-0799", "date": "2026-08-01", "client": "ម៉ូយ ស្រីពៅ", "product": "មាន់រស់", "unit": "head", "qty": 50, "price": 6, "total": 300, "status": "partial", "paid": 150, "remaining": 150, "branch": "Central ស្ទឹងមានជ័យ", "staff": "ដារ៉ា", "method": "cash" }
+    {
+      "id": "sl1",
+      "invoiceNo": "INV-0801",
+      "date": "2026-08-02",
+      "client": "ម៉ូយ ចាន់ណា",
+      "product": "មាន់ស្រែ",
+      "unit": "taka",
+      "qty": 2,
+      "price": 500,
+      "total": 1000,
+      "status": "paid",
+      "paid": 1000,
+      "remaining": 0,
+      "branch": "Central ស្ទឹងមានជ័យ",
+      "staff": "ដារ៉ា",
+      "method": "cash"
+    },
+    {
+      "id": "sl2",
+      "invoiceNo": "INV-0800",
+      "date": "2026-08-02",
+      "client": "ហាង សំណាង",
+      "product": "មាន់សាច់",
+      "unit": "kg",
+      "qty": 50,
+      "price": 4,
+      "total": 200,
+      "status": "credit",
+      "paid": 0,
+      "remaining": 200,
+      "branch": "អូរឫស្សី",
+      "staff": "សំណាង",
+      "method": "cash"
+    },
+    {
+      "id": "sl3",
+      "invoiceNo": "INV-0799",
+      "date": "2026-08-01",
+      "client": "ម៉ូយ ស្រីពៅ",
+      "product": "មាន់រស់",
+      "unit": "head",
+      "qty": 50,
+      "price": 6,
+      "total": 300,
+      "status": "partial",
+      "paid": 150,
+      "remaining": 150,
+      "branch": "Central ស្ទឹងមានជ័យ",
+      "staff": "ដារ៉ា",
+      "method": "cash"
+    }
   ],
   "purchases": [
-    { "id": "pur1", "invoiceNo": "PUR-0201", "date": "2026-08-02", "supplier": "Supplier A", "product": "មាន់ស្រែ", "heads": 200, "kg": 400, "total": 1000, "status": "paid", "paid": 1000, "remaining": 0, "branch": "Central ស្ទឹងមានជ័យ" },
-    { "id": "pur2", "invoiceNo": "PUR-0200", "date": "2026-08-01", "supplier": "កសិដ្ឋាន សុខា", "product": "មាន់សាច់", "heads": 150, "kg": 375, "total": 1500, "status": "partial", "paid": 700, "remaining": 800, "branch": "Central ស្ទឹងមានជ័យ" }
+    {
+      "id": "pur1",
+      "invoiceNo": "PUR-0201",
+      "date": "2026-08-02",
+      "supplier": "Supplier A",
+      "product": "មាន់ស្រែ",
+      "heads": 200,
+      "kg": 400,
+      "total": 1000,
+      "status": "paid",
+      "paid": 1000,
+      "remaining": 0,
+      "branch": "Central ស្ទឹងមានជ័យ"
+    },
+    {
+      "id": "pur2",
+      "invoiceNo": "PUR-0200",
+      "date": "2026-08-01",
+      "supplier": "កសិដ្ឋាន សុខា",
+      "product": "មាន់សាច់",
+      "heads": 150,
+      "kg": 375,
+      "total": 1500,
+      "status": "partial",
+      "paid": 700,
+      "remaining": 800,
+      "branch": "Central ស្ទឹងមានជ័យ"
+    }
   ],
   "purchaseRequests": [
-    { "id": "pr1", "requestNo": "PR-001", "date": "2026-08-02", "branch": "អូរឫស្សី", "staff": "Sale Staff 2", "product": "មាន់ស្រែ", "heads": 100, "kg": 250, "reason": "ស្តុកជិតអស់", "status": "pending" },
-    { "id": "pr2", "requestNo": "PR-002", "date": "2026-08-01", "branch": "ផ្សារដើមគរ", "staff": "Sale Staff 3", "product": "មាន់សាច់", "heads": 80, "kg": 200, "reason": "តម្រូវការម៉ូយ", "status": "approved" }
+    {
+      "id": "pr1",
+      "requestNo": "PR-001",
+      "date": "2026-08-02",
+      "branch": "អូរឫស្សី",
+      "staff": "Sale Staff 2",
+      "product": "មាន់ស្រែ",
+      "heads": 100,
+      "kg": 250,
+      "reason": "ស្តុកជិតអស់",
+      "status": "pending"
+    },
+    {
+      "id": "pr2",
+      "requestNo": "PR-002",
+      "date": "2026-08-01",
+      "branch": "ផ្សារដើមគរ",
+      "staff": "Sale Staff 3",
+      "product": "មាន់សាច់",
+      "heads": 80,
+      "kg": 200,
+      "reason": "តម្រូវការម៉ូយ",
+      "status": "approved"
+    }
   ],
   "transfers": [
-    { "id": "trf1", "transferNo": "TRF-0101", "date": "2026-08-02", "from": "Central ស្ទឹងមានជ័យ", "to": "អូរឫស្សី", "product": "មាន់ស្រែ", "heads": 50, "kg": 125, "status": "received" },
-    { "id": "trf2", "transferNo": "TRF-0100", "date": "2026-08-01", "from": "Central ស្ទឹងមានជ័យ", "to": "ផ្សារដើមគរ", "product": "មាន់សាច់", "heads": 30, "kg": 75, "status": "pending" }
+    {
+      "id": "trf1",
+      "transferNo": "TRF-0101",
+      "date": "2026-08-02",
+      "from": "Central ស្ទឹងមានជ័យ",
+      "to": "អូរឫស្សី",
+      "product": "មាន់ស្រែ",
+      "heads": 50,
+      "kg": 125,
+      "status": "received"
+    },
+    {
+      "id": "trf2",
+      "transferNo": "TRF-0100",
+      "date": "2026-08-01",
+      "from": "Central ស្ទឹងមានជ័យ",
+      "to": "ផ្សារដើមគរ",
+      "product": "មាន់សាច់",
+      "heads": 30,
+      "kg": 75,
+      "status": "pending"
+    }
   ],
   "adjustments": [
-    { "id": "adj1", "date": "2026-08-01", "product": "មាន់រស់", "branch": "Central ស្ទឹងមានជ័យ", "type": "dead", "headsBefore": 600, "headsAdjustment": -5, "headsAfter": 595, "kgBefore": 1500, "kgAdjustment": -12.5, "kgAfter": 1487.5, "reason": "ងាប់ក្នុងការដឹក" }
+    {
+      "id": "adj1",
+      "date": "2026-08-01",
+      "product": "មាន់រស់",
+      "branch": "Central ស្ទឹងមានជ័យ",
+      "type": "dead",
+      "headsBefore": 600,
+      "headsAdjustment": -5,
+      "headsAfter": 595,
+      "kgBefore": 1500,
+      "kgAdjustment": -12.5,
+      "kgAfter": 1487.5,
+      "reason": "ងាប់ក្នុងការដឹក"
+    }
   ],
   "expenses": [
-    { "id": "exp1", "date": "2026-08-02", "category": "ថ្លៃដឹក", "description": "ដឹកមាន់ Central → អូរឫស្សី", "amount": 25, "method": "cash", "branch": "Central ស្ទឹងមានជ័យ" },
-    { "id": "exp2", "date": "2026-08-02", "category": "ម្ហូបអាហារ", "description": "អាហារពេលព្រឹក", "amount": 15, "method": "cash", "branch": "Central ស្ទឹងមានជ័យ" }
+    {
+      "id": "exp1",
+      "date": "2026-08-02",
+      "category": "ថ្លៃដឹក",
+      "description": "ដឹកមាន់ Central → អូរឫស្សី",
+      "amount": 25,
+      "method": "cash",
+      "branch": "Central ស្ទឹងមានជ័យ"
+    },
+    {
+      "id": "exp2",
+      "date": "2026-08-02",
+      "category": "ម្ហូបអាហារ",
+      "description": "អាហារពេលព្រឹក",
+      "amount": 15,
+      "method": "cash",
+      "branch": "Central ស្ទឹងមានជ័យ"
+    }
   ],
   "payments": [
-    { "id": "pay1", "receiptNo": "REC-0301", "date": "2026-08-02", "type": "client", "party": "ម៉ូយ ចាន់ណា", "invoiceNo": "INV-0795", "amount": 300, "method": "cash", "remainingAfter": 500 }
+    {
+      "id": "pay1",
+      "receiptNo": "REC-0301",
+      "date": "2026-08-02",
+      "type": "client",
+      "party": "ម៉ូយ ចាន់ណា",
+      "invoiceNo": "INV-0795",
+      "amount": 300,
+      "method": "cash",
+      "remainingAfter": 500
+    }
   ],
   "settings": {
     "headsPerTaka": 100,
-    "expenseCategories": ["ថ្លៃដឹក", "ម្ហូបអាហារ", "ប្រេងឥន្ធនៈ", "ផ្សេងៗ"]
+    "expenseCategories": [
+      "ថ្លៃដឹក",
+      "ម្ហូបអាហារ",
+      "ប្រេងឥន្ធនៈ",
+      "ផ្សេងៗ"
+    ]
   },
   "priceMatrix": [
-    { "product": "មាន់ស្រែ", "centralSelling": 500, "centralClient": 480, "orusseySelling": 520, "orusseyClient": 500, "deimkorSelling": 510, "deimkorClient": 490 },
-    { "product": "មាន់សាច់", "centralSelling": 420, "centralClient": 400, "orusseySelling": 440, "orusseyClient": 420, "deimkorSelling": 430, "deimkorClient": 410 },
-    { "product": "មាន់ទា", "centralSelling": 700, "centralClient": 680, "orusseySelling": 720, "orusseyClient": 700, "deimkorSelling": 710, "deimkorClient": 690 },
-    { "product": "មាន់រស់", "centralSelling": 350, "centralClient": 330, "orusseySelling": 370, "orusseyClient": 350, "deimkorSelling": 360, "deimkorClient": 340 }
-  ]
+    {
+      "product": "មាន់ស្រែ",
+      "centralSelling": 500,
+      "centralClient": 480,
+      "orusseySelling": 520,
+      "orusseyClient": 500,
+      "deimkorSelling": 510,
+      "deimkorClient": 490
+    },
+    {
+      "product": "មាន់សាច់",
+      "centralSelling": 420,
+      "centralClient": 400,
+      "orusseySelling": 440,
+      "orusseyClient": 420,
+      "deimkorSelling": 430,
+      "deimkorClient": 410
+    },
+    {
+      "product": "មាន់ទា",
+      "centralSelling": 700,
+      "centralClient": 680,
+      "orusseySelling": 720,
+      "orusseyClient": 700,
+      "deimkorSelling": 710,
+      "deimkorClient": 690
+    },
+    {
+      "product": "មាន់រស់",
+      "centralSelling": 350,
+      "centralClient": 330,
+      "orusseySelling": 370,
+      "orusseyClient": 350,
+      "deimkorSelling": 360,
+      "deimkorClient": 340
+    }
+  ],
+  "comments": []
 }
