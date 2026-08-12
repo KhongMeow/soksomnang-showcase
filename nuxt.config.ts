@@ -4,6 +4,9 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-07-01",
   devtools: { enabled: true },
   modules: ["@pinia/nuxt"],
+  experimental: {
+    appManifest: false,
+  },
   css: ["~/assets/css/main.css"],
   runtimeConfig: {
     public: {

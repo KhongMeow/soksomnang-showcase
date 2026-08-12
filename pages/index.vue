@@ -199,26 +199,42 @@ onUnmounted(() => {
 
 function trackIframeRoute() {
   try {
-    const desktopWin = desktopIframeRef.value?.contentWindow
-    const mobileWin = mobileIframeRef.value?.contentWindow
+    const desktopWin = desktopIframeRef.value?.contentWindow as any
+    const mobileWin = mobileIframeRef.value?.contentWindow as any
 
     const desktopPath = desktopWin?.location?.pathname
     const mobilePath = mobileWin?.location?.pathname
 
-    // 1. Check if Mobile Frame navigated
-    if (mobilePath && mobilePath !== "about:blank" && mobilePath !== currentIframeRoute.value) {
+    // 1. Check Desktop Frame Navigation
+    if (desktopPath && desktopPath !== "about:blank" && desktopPath !== currentIframeRoute.value) {
+      currentIframeRoute.value = desktopPath
+      const matched = screens.find((s) => s.route === desktopPath)
+      if (matched && matched.id !== activeScreenId.value) {
+        activeScreenId.value = matched.id
+      }
+      // Sync Mobile frame to match Desktop
+      if (mobileWin && mobilePath && mobilePath !== desktopPath) {
+        if (mobileWin.__nuxt_router__) {
+          mobileWin.__nuxt_router__.push(desktopPath)
+        } else if (mobileWin.location) {
+          mobileWin.location.href = desktopPath
+        }
+      }
+    }
+    // 2. Check Mobile Frame Navigation
+    else if (mobilePath && mobilePath !== "about:blank" && mobilePath !== currentIframeRoute.value) {
       currentIframeRoute.value = mobilePath
       const matched = screens.find((s) => s.route === mobilePath)
       if (matched && matched.id !== activeScreenId.value) {
         activeScreenId.value = matched.id
       }
-    }
-    // 2. Check if Desktop Frame navigated
-    else if (desktopPath && desktopPath !== "about:blank" && desktopPath !== currentIframeRoute.value) {
-      currentIframeRoute.value = desktopPath
-      const matched = screens.find((s) => s.route === desktopPath)
-      if (matched && matched.id !== activeScreenId.value) {
-        activeScreenId.value = matched.id
+      // Sync Desktop frame to match Mobile
+      if (desktopWin && desktopPath && desktopPath !== mobilePath) {
+        if (desktopWin.__nuxt_router__) {
+          desktopWin.__nuxt_router__.push(mobilePath)
+        } else if (desktopWin.location) {
+          desktopWin.location.href = mobilePath
+        }
       }
     }
   } catch {
@@ -243,7 +259,13 @@ async function fetchCommentCounts() {
 async function switchToUser(u: string, p: string) {
   isLoadingAuth.value = true
   try {
-    await login(u, p)
+    const loggedIn = await login(u, p)
+    const adminOnlyRoutes = ["/settings", "/reports", "/reports/sale", "/supplier-payment", "/expense"]
+    if (loggedIn.role !== "admin" && adminOnlyRoutes.includes(currentIframeRoute.value)) {
+      currentIframeRoute.value = "/dashboard"
+      const dashScreen = screens.find((s) => s.route === "/dashboard")
+      if (dashScreen) activeScreenId.value = dashScreen.id
+    }
     refreshFrames()
   } catch (e) {
     console.error(e)
@@ -261,14 +283,18 @@ function selectScreen(s: typeof screens[0]) {
     const mobileWin = mobileIframeRef.value?.contentWindow as any
 
     if (desktopWin?.__nuxt_router__) {
-      desktopWin.__nuxt_router__.push(s.route)
-    } else if (desktopWin?.location) {
+      if (desktopWin.location?.pathname !== s.route) {
+        desktopWin.__nuxt_router__.push(s.route)
+      }
+    } else if (desktopWin?.location && desktopWin.location.pathname !== s.route) {
       desktopWin.location.href = s.route
     }
 
     if (mobileWin?.__nuxt_router__) {
-      mobileWin.__nuxt_router__.push(s.route)
-    } else if (mobileWin?.location) {
+      if (mobileWin.location?.pathname !== s.route) {
+        mobileWin.__nuxt_router__.push(s.route)
+      }
+    } else if (mobileWin?.location && mobileWin.location.pathname !== s.route) {
       mobileWin.location.href = s.route
     }
   } catch (e) {
@@ -487,7 +513,7 @@ function refreshFrames() {
               <iframe
                 ref="desktopIframeRef"
                 :key="`desktop-single-${iframeKey}`"
-                :src="activeScreen.route"
+                src="/dashboard"
                 class="w-full h-full border-0 bg-white"
                 title="Desktop Live Code Frame"
               />
@@ -520,7 +546,7 @@ function refreshFrames() {
               <iframe
                 ref="mobileIframeRef"
                 :key="`mobile-single-${iframeKey}`"
-                :src="activeScreen.route"
+                src="/dashboard"
                 class="w-full h-full border-0 bg-white"
                 title="Mobile Live Code Frame"
               />

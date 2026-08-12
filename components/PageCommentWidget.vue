@@ -37,6 +37,9 @@ const availableTags = [
   "❓ Question"
 ]
 
+const showAllPagesMode = ref(false)
+const exportCopied = ref(false)
+
 onMounted(() => {
   if (user.value?.name) {
     newAuthor.value = user.value.name
@@ -46,7 +49,7 @@ onMounted(() => {
   fetchComments()
 })
 
-watch([() => props.screenId, () => props.route], () => {
+watch([() => props.screenId, () => props.route, showAllPagesMode], () => {
   fetchComments()
 })
 
@@ -54,7 +57,7 @@ async function fetchComments() {
   loading.value = true
   try {
     const res = await api.get<CommentItem[]>("/comments")
-    if (props.screenId || props.route) {
+    if (!showAllPagesMode.value && (props.screenId || props.route)) {
       comments.value = res.filter((c) => {
         if (props.screenId && c.screenId === props.screenId) return true
         if (props.route && c.route === props.route) return true
@@ -67,6 +70,71 @@ async function fetchComments() {
     console.error("Failed to load comments", e)
   } finally {
     loading.value = false
+  }
+}
+
+async function exportAllCommentsJSON() {
+  try {
+    const all = await api.get<CommentItem[]>("/comments")
+    const jsonStr = JSON.stringify(all, null, 2)
+    const blob = new Blob([jsonStr], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `soksomnang-all-comments-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    console.error("Failed to export JSON", e)
+  }
+}
+
+async function exportAllCommentsCSV() {
+  try {
+    const all = await api.get<CommentItem[]>("/comments")
+    const headers = ["ID", "Author", "Role", "Tag", "Route", "ScreenId", "Date", "CommentText", "ThumbsUp", "Heart"]
+    const rows = all.map((c) => [
+      `"${c.id}"`,
+      `"${(c.author || "").replace(/"/g, '""')}"`,
+      `"${(c.role || "").replace(/"/g, '""')}"`,
+      `"${(c.tag || "").replace(/"/g, '""')}"`,
+      `"${(c.route || "").replace(/"/g, '""')}"`,
+      `"${(c.screenId || "").replace(/"/g, '""')}"`,
+      `"${c.createdAt || ""}"`,
+      `"${(c.text || "").replace(/"/g, '""')}"`,
+      c.reactions?.thumbsup || 0,
+      c.reactions?.heart || 0,
+    ])
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n")
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `soksomnang-all-comments-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    console.error("Failed to export CSV", e)
+  }
+}
+
+async function copyAllCommentsMarkdown() {
+  try {
+    const all = await api.get<CommentItem[]>("/comments")
+    const formatted = all
+      .map(
+        (c) =>
+          `### [${c.tag}] ${c.author} (${c.role})\n- **Route**: \`${c.route}\` (${c.screenId})\n- **Date**: ${c.createdAt}\n- **Comment**: ${c.text}\n`,
+      )
+      .join("\n---\n\n")
+
+    await navigator.clipboard.writeText(`# Soksomnang Page Comments Export (${all.length} total)\n\n` + formatted)
+    exportCopied.value = true
+    setTimeout(() => {
+      exportCopied.value = false
+    }, 2500)
+  } catch (e) {
+    console.error("Failed to copy markdown", e)
   }
 }
 
@@ -121,24 +189,67 @@ function formatTime(iso: string) {
 
 <template>
   <div class="bg-[#0c1c30] border border-white/15 rounded-2xl p-4 lg:p-5 text-white shadow-2xl flex flex-col space-y-4">
-    <!-- Header Title -->
-    <div class="flex items-center justify-between border-b border-white/10 pb-3">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold text-base">
-          💬
+    <!-- Header Title & Export Bar -->
+    <div class="space-y-2.5 border-b border-white/10 pb-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold text-base">
+            💬
+          </div>
+          <div>
+            <h3 class="text-sm font-extrabold text-white">
+              {{ showAllPagesMode ? "មតិយោបល់គ្រប់ទំព័រទាំងអស់ (All Pages Comments)" : "មតិយោបល់ទំព័រ (Page Comments)" }}
+            </h3>
+            <p class="text-[11px] text-cyan-300">
+              {{ showAllPagesMode ? "ទិដ្ឋភាពរួមនៃមតិយោបល់គ្រប់ Screen ទាំងអស់" : (route ? `Route: ${route}` : (screenTitle ? `${screenTitle}` : "មតិយោបល់លើប្រព័ន្ធទាំងមូល")) }}
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 class="text-sm font-extrabold text-white">
-            មតិយោបល់ទំព័រ (Page Comments)
-          </h3>
-          <p class="text-[11px] text-cyan-300">
-            {{ route ? `Route: ${route}` : (screenTitle ? `${screenTitle}` : "មតិយោបល់លើប្រព័ន្ធទាំងមូល") }}
-          </p>
+
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <!-- Toggle View All vs Current Page Only -->
+          <button
+            @click="showAllPagesMode = !showAllPagesMode"
+            class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all border shadow-sm"
+            :class="showAllPagesMode ? 'bg-cyan-600 text-white border-cyan-400' : 'bg-white/10 text-gray-200 border-white/15 hover:bg-white/20 hover:text-white'"
+          >
+            {{ showAllPagesMode ? "📄 មើលតែទំព័រនេះ" : "🌐 មើលគ្រប់ទំព័រ (All)" }}
+          </button>
+          <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+            {{ comments.length }} មតិ
+          </span>
         </div>
       </div>
-      <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-        {{ comments.length }} មតិ
-      </span>
+
+      <!-- Export Action Buttons Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+        <span class="text-[11px] text-cyan-200 font-semibold flex items-center gap-1">
+          <span>📥 ទាញយកមតិយោបល់ (Export All):</span>
+        </span>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <button
+            @click="exportAllCommentsCSV"
+            class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600/80 hover:bg-emerald-500 text-white border border-emerald-400/40 transition-all flex items-center gap-1 shadow-sm active:scale-95"
+            title="Export all comments from all pages as CSV spreadsheet"
+          >
+            <span>📊 CSV</span>
+          </button>
+          <button
+            @click="exportAllCommentsJSON"
+            class="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-600/80 hover:bg-cyan-500 text-white border border-cyan-400/40 transition-all flex items-center gap-1 shadow-sm active:scale-95"
+            title="Export all comments from all pages as JSON file"
+          >
+            <span>📥 JSON</span>
+          </button>
+          <button
+            @click="copyAllCommentsMarkdown"
+            class="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600/80 hover:bg-indigo-500 text-white border border-indigo-400/40 transition-all flex items-center gap-1 shadow-sm active:scale-95"
+            title="Copy all comments from all pages as Markdown text"
+          >
+            <span>{{ exportCopied ? "✓ បានចម្លង (Copied!)" : "📋 Copy All" }}</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Tag Filter Pills -->

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-const { role, logout, user, has } = useAuth()
+const { role, logout, user, has, fetchMe } = useAuth()
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
 const sidebarOpen = ref(false)
-const showCommentDrawer = ref(false)
 const prStore = usePurchaseRequestsStore()
 
 const canReviewRequests = computed(() => !!role.value)
@@ -19,6 +18,9 @@ const currentBranchName = computed(() => {
 
 onMounted(async () => {
   try {
+    if (!user.value) {
+      await fetchMe()
+    }
     branches.value = await api.get<{ id: string; name: string }[]>("/branches")
   } catch (e) {
     console.error(e)
@@ -41,6 +43,9 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 watch(() => route.path, () => {
   sidebarOpen.value = false
   if (canReviewRequests.value) prStore.refresh()
+  if (typeof window !== 'undefined') {
+    window.scrollTo(0, 0)
+  }
 })
 
 type NavItem = {
@@ -108,8 +113,9 @@ const isActive = (path: string) => route.path === path
 
 function navigate(path: string) {
   sidebarOpen.value = false
-  router.push(path)
-  window.scrollTo({ top: 0, behavior: "smooth" })
+  if (route.path !== path) {
+    router.push(path)
+  }
 }
 
 const isLoginPage = computed(() => route.path === "/login" || route.path === "/showcase")
@@ -144,20 +150,20 @@ watch(() => route.path, () => {
           v-for="item in navItems"
           :key="item.id"
           @click="navigate(item.path)"
-          class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors"
+          class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 active:scale-[0.98]"
           :class="
             isActive(item.path)
-              ? 'bg-[#00b4c8] text-white'
+              ? 'bg-[#00b4c8] text-white shadow-md shadow-[#00b4c8]/20'
               : 'text-white/60 hover:bg-white/10 hover:text-white'
           "
         >
-          <span class="flex-shrink-0">
+          <span class="flex-shrink-0 transition-transform duration-200" :class="{ 'scale-105': isActive(item.path) }">
             <component :is="item.icon" />
           </span>
           <span class="font-medium text-sm">{{ item.label }}</span>
           <span
             v-if="item.id === 'purchase-requests' && prStore.pending > 0"
-            class="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-[#dc2626] text-white text-xs font-bold flex items-center justify-center"
+            class="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-[#dc2626] text-white text-xs font-bold flex items-center justify-center shadow-sm"
           >
             {{ prStore.pending }}
           </span>
@@ -274,53 +280,29 @@ watch(() => route.path, () => {
     </div>
 
     <!-- Mobile bottom navigation -->
-    <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 shadow-lg pb-[env(safe-area-inset-bottom)]">
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200/80 z-30 shadow-lg pb-[env(safe-area-inset-bottom)]">
       <div class="grid grid-cols-5 items-stretch">
         <button
           v-for="item in bottomNav"
           :key="item.id"
           @click="navigate(item.path)"
-          class="relative flex flex-col items-center justify-center gap-0.5 py-2.5 min-w-0 transition-colors"
+          class="relative flex flex-col items-center justify-center gap-0.5 py-2.5 min-w-0 transition-all duration-200 active:scale-95 select-none"
           :class="isActive(item.path) ? 'text-[#00b4c8]' : 'text-gray-400 active:text-gray-600'"
         >
-          <span class="transition-transform" :class="{ 'scale-110': isActive(item.path) }">
+          <span class="transition-transform duration-200" :class="{ 'scale-110 -translate-y-0.5': isActive(item.path) }">
             <component :is="item.icon" />
           </span>
-          <span class="text-[11px] font-semibold leading-tight text-center whitespace-nowrap w-full px-0.5" :class="{ 'text-[#0f2a4a]': isActive(item.path) }">
+          <span class="text-[11px] font-semibold leading-tight text-center whitespace-nowrap w-full px-0.5 transition-colors duration-200" :class="{ 'text-[#0f2a4a] font-bold': isActive(item.path) }">
             {{ item.label }}
           </span>
           <div
-            class="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full transition-opacity"
-            :class="isActive(item.path) ? 'bg-[#00b4c8] opacity-100' : 'opacity-0'"
+            class="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 rounded-b-full transition-all duration-300"
+            :class="isActive(item.path) ? 'bg-[#00b4c8] opacity-100 scale-x-100 shadow-sm shadow-[#00b4c8]/50' : 'opacity-0 scale-x-0'"
           />
         </button>
       </div>
     </nav>
 
-    <!-- Floating Page Comment Button -->
-    <div class="fixed bottom-20 lg:bottom-6 left-4 lg:left-6 z-40">
-      <button
-        @click="showCommentDrawer = !showCommentDrawer"
-        class="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#0f2a4a] text-white shadow-xl hover:bg-[#1a4a7a] transition-all border border-cyan-400/40 text-xs font-bold"
-      >
-        <span class="text-base">💬</span>
-        <span>មតិយោបល់</span>
-      </button>
-    </div>
-
-    <!-- Floating Comment Modal Overlay -->
-    <Transition name="fade">
-      <div v-if="showCommentDrawer" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" @click.self="showCommentDrawer = false">
-        <div class="w-full max-w-lg max-h-[85vh] overflow-y-auto">
-          <div class="flex justify-end pb-2">
-            <button @click="showCommentDrawer = false" class="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold hover:bg-white/30">
-              ✕ បិទ (Close)
-            </button>
-          </div>
-          <PageCommentWidget :route="route.path" :screen-title="route.path" />
-        </div>
-      </div>
-    </Transition>
   </div>
 </template>
 

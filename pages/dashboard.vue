@@ -3,7 +3,7 @@ import type { Role, Branch, Product, Client, Supplier, Sale, Purchase, StockTran
 
 definePageMeta({ middleware: "auth" })
 
-const { role, user, has } = useAuth()
+const { role, user, has, fetchMe } = useAuth()
 const router = useRouter()
 const api = useApi()
 
@@ -45,6 +45,9 @@ const advanced = ref<any>({
 
 onMounted(async () => {
   try {
+    if (!user.value) {
+      await fetchMe()
+    }
     const [b, p, c, s, sum, rec, adv] = await Promise.all([
       api.get<Branch[]>("/branches"),
       api.get<Product[]>("/products"),
@@ -67,6 +70,12 @@ onMounted(async () => {
     console.error(e)
   } finally {
     loading.value = false
+  }
+})
+
+watch(user, (u) => {
+  if (u?.branchId) {
+    branch.value = u.branchId
   }
 })
 

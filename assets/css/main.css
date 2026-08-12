@@ -48,12 +48,22 @@ input[type="number"]::-webkit-inner-spin-button {
   margin: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 .page-enter-active,
 .page-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity 0.12s ease-out;
 }
+
 .page-enter-from,
 .page-leave-to {
   opacity: 0;
-  transform: translateY(3px);
 }
+
+/* Micro-interaction helper classes for professional app feel */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+

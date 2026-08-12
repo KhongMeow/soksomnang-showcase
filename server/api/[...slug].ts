@@ -50,14 +50,32 @@ export default defineEventHandler(async (event) => {
   }
 
   if (path === '/auth/me') {
-    const admin = db.users.find((u: any) => u.role === 'admin') || db.users[0]
+    const authHeader = getHeader(event, 'authorization') || ''
+    const tokenCookie = getCookie(event, 'auth:token') || ''
+    const roleCookie = getCookie(event, 'auth:role') || ''
+
+    let user: any = null
+
+    // 1. Match by token user ID (e.g., mock-jwt-token-u2-12345)
+    const tokenMatch = (authHeader || tokenCookie).match(/mock-jwt-token-([a-zA-Z0-9_]+)-/)
+    if (tokenMatch) {
+      const uId = tokenMatch[1]
+      user = db.users.find((u: any) => u.id === uId || u.username === uId)
+    }
+
+    // 2. Fallback to role match or username match
+    if (!user && roleCookie) {
+      user = db.users.find((u: any) => u.role === roleCookie || u.username === roleCookie)
+    }
+
+    const current = user || db.users[0]
     return {
-      id: admin.id,
-      username: admin.username,
-      name: admin.name,
-      role: admin.role,
-      branchId: admin.branchId,
-      permissions: admin.permissions
+      id: current.id,
+      username: current.username,
+      name: current.name,
+      role: current.role,
+      branchId: current.branchId,
+      permissions: current.permissions
     }
   }
 
