@@ -207,23 +207,37 @@ onUnmounted(() => {
   if (routeTrackerTimer) clearInterval(routeTrackerTimer)
 })
 
+function isInvalidPath(p?: string) {
+  if (!p) return true
+  const lower = p.toLowerCase().trim()
+  return lower === "about:blank" || lower === "/blank" || lower === "blank" || lower === ""
+}
+
 function trackIframeRoute() {
   try {
-    const desktopWin = desktopIframeRef.value?.contentWindow as any
-    const mobileWin = mobileIframeRef.value?.contentWindow as any
+    const desktopEl = desktopIframeRef.value
+    const mobileEl = mobileIframeRef.value
+
+    const desktopWin = desktopEl?.isConnected ? (desktopEl.contentWindow as any) : null
+    const mobileWin = mobileEl?.isConnected ? (mobileEl.contentWindow as any) : null
 
     const desktopPath = desktopWin?.location?.pathname
     const mobilePath = mobileWin?.location?.pathname
 
+    // Auto-recover if currentIframeRoute was accidentally set to /blank
+    if (isInvalidPath(currentIframeRoute.value)) {
+      currentIframeRoute.value = "/dashboard"
+    }
+
     // 1. Check Desktop Frame Navigation
-    if (desktopPath && desktopPath !== "about:blank" && desktopPath !== currentIframeRoute.value) {
+    if (desktopPath && !isInvalidPath(desktopPath) && desktopPath !== currentIframeRoute.value) {
       currentIframeRoute.value = desktopPath
       const matched = screens.find((s) => s.route === desktopPath)
       if (matched && matched.id !== activeScreenId.value) {
         activeScreenId.value = matched.id
       }
       // Sync Mobile frame to match Desktop
-      if (mobileWin && mobilePath && mobilePath !== desktopPath) {
+      if (mobileWin && mobilePath && !isInvalidPath(mobilePath) && mobilePath !== desktopPath) {
         if (mobileWin.__nuxt_router__) {
           mobileWin.__nuxt_router__.push(desktopPath)
         } else if (mobileWin.location) {
@@ -232,14 +246,15 @@ function trackIframeRoute() {
       }
     }
     // 2. Check Mobile Frame Navigation
-    else if (mobilePath && mobilePath !== "about:blank" && mobilePath !== currentIframeRoute.value) {
+    else if (mobilePath && !isInvalidPath(mobilePath) && mobilePath !== currentIframeRoute.value) {
       currentIframeRoute.value = mobilePath
       const matched = screens.find((s) => s.route === mobilePath)
-      if (matched && matched.id !== activeScreenId.value) {
-        activeScreenId.value = matched.id
+      if (matched && matched.id !== mobilePath) {
+        const m = screens.find((s) => s.route === mobilePath)
+        if (m) activeScreenId.value = m.id
       }
       // Sync Desktop frame to match Mobile
-      if (desktopWin && desktopPath && desktopPath !== mobilePath) {
+      if (desktopWin && desktopPath && !isInvalidPath(desktopPath) && desktopPath !== mobilePath) {
         if (desktopWin.__nuxt_router__) {
           desktopWin.__nuxt_router__.push(mobilePath)
         } else if (desktopWin.location) {
@@ -271,7 +286,7 @@ async function switchToUser(u: string, p: string) {
   try {
     const loggedIn = await login(u, p)
     const adminOnlyRoutes = ["/settings", "/reports", "/reports/sale", "/supplier-payment", "/expense"]
-    if (loggedIn.role !== "admin" && adminOnlyRoutes.includes(currentIframeRoute.value)) {
+    if (isInvalidPath(currentIframeRoute.value) || (loggedIn.role !== "admin" && adminOnlyRoutes.includes(currentIframeRoute.value))) {
       currentIframeRoute.value = "/dashboard"
       const dashScreen = screens.find((s) => s.route === "/dashboard")
       if (dashScreen) activeScreenId.value = dashScreen.id
@@ -285,18 +300,22 @@ async function switchToUser(u: string, p: string) {
 }
 
 function selectScreen(s: typeof screens[0]) {
+  if (!s || isInvalidPath(s.route)) return
   activeScreenId.value = s.id
   currentIframeRoute.value = s.route
 
   try {
-    const desktopWin = desktopIframeRef.value?.contentWindow as any
-    const mobileWin = mobileIframeRef.value?.contentWindow as any
+    const desktopEl = desktopIframeRef.value
+    const mobileEl = mobileIframeRef.value
+
+    const desktopWin = desktopEl?.isConnected ? (desktopEl.contentWindow as any) : null
+    const mobileWin = mobileEl?.isConnected ? (mobileEl.contentWindow as any) : null
 
     if (desktopWin?.__nuxt_router__) {
       if (desktopWin.location?.pathname !== s.route) {
         desktopWin.__nuxt_router__.push(s.route)
       }
-    } else if (desktopWin?.location && desktopWin.location.pathname !== s.route) {
+    } else if (desktopWin?.location && !isInvalidPath(desktopWin.location.pathname) && desktopWin.location.pathname !== s.route) {
       desktopWin.location.href = s.route
     }
 
@@ -304,7 +323,7 @@ function selectScreen(s: typeof screens[0]) {
       if (mobileWin.location?.pathname !== s.route) {
         mobileWin.__nuxt_router__.push(s.route)
       }
-    } else if (mobileWin?.location && mobileWin.location.pathname !== s.route) {
+    } else if (mobileWin?.location && !isInvalidPath(mobileWin.location.pathname) && mobileWin.location.pathname !== s.route) {
       mobileWin.location.href = s.route
     }
   } catch (e) {
