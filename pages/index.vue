@@ -13,7 +13,14 @@ const activeScreenId = ref<string>("admin-dashboard")
 const isLoadingAuth = ref(false)
 const iframeKey = ref(0)
 const showCommentsSection = ref(true)
+const showMobileControlsDrawer = ref(false)
+const showCommentsModal = ref(false)
 const commentCounts = ref<Record<string, number>>({})
+
+function selectScreenById(id: string) {
+  const s = screens.find((sc) => sc.id === id)
+  if (s) selectScreen(s)
+}
 
 const desktopIframeRef = ref<HTMLIFrameElement | null>(null)
 const mobileIframeRef = ref<HTMLIFrameElement | null>(null)
@@ -186,6 +193,9 @@ const activeScreen = computed(() => {
 })
 
 onMounted(async () => {
+  if (typeof window !== "undefined" && window.innerWidth < 1024) {
+    displayMode.value = "mobile"
+  }
   if (!isLoggedIn.value) {
     await switchToUser("admin", "admin")
   }
@@ -309,167 +319,282 @@ function refreshFrames() {
 
 <template>
   <div class="min-h-screen bg-[#061121] text-white font-sans flex flex-col selection:bg-[#00b4c8]">
-    <!-- Top Bar Navigation Header -->
-    <header class="sticky top-0 z-50 bg-[#0c223c] border-b border-white/15 px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4 shadow-xl">
-      <!-- Title Logo -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-[#00b4c8] flex items-center justify-center shadow-lg shadow-[#00b4c8]/25 flex-shrink-0">
-          <svg viewBox="0 0 32 32" fill="none" class="w-6 h-6">
+    <!-- DESKTOP TOP BAR & NAVIGATION HEADER (hidden lg:block) -->
+    <div class="hidden lg:block">
+      <header class="sticky top-0 z-50 bg-[#0c223c] border-b border-white/15 px-8 py-3 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <!-- Title Logo -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-[#00b4c8] flex items-center justify-center shadow-lg shadow-[#00b4c8]/25 flex-shrink-0">
+            <svg viewBox="0 0 32 32" fill="none" class="w-6 h-6">
+              <circle cx="16" cy="11" r="7" fill="white" opacity="0.9" />
+              <path d="M4 26c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.7" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base font-extrabold text-white">
+                Soksomnang Real Code Showcase
+              </h1>
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
+                ⚡ LIVE CODE (3 BRANCHES)
+              </span>
+            </div>
+            <p class="text-xs text-cyan-300">
+              Standalone Vercel App · Dynamic Page Route & Comment Tracking 💬
+            </p>
+          </div>
+        </div>
+
+        <!-- Live User & Branch Switcher -->
+        <div class="flex flex-wrap items-center gap-1.5 bg-[#040a14] p-1.5 rounded-xl border border-white/10">
+          <span class="text-xs text-gray-300 font-semibold px-1">Switch User:</span>
+          <button
+            v-for="prof in userProfiles"
+            :key="prof.username"
+            @click="switchToUser(prof.username, prof.pass)"
+            :disabled="isLoadingAuth"
+            class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+            :class="
+              user?.username === prof.username
+                ? 'bg-[#00b4c8] text-white shadow-md ring-2 ring-cyan-300/40'
+                : 'bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white'
+            "
+          >
+            {{ prof.label }}
+          </button>
+        </div>
+
+        <!-- Viewport Display Mode Selector -->
+        <div class="flex items-center bg-[#040a14] p-1 rounded-xl border border-white/10">
+          <button
+            @click="displayMode = 'side'"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+            :class="displayMode === 'side' ? 'bg-[#00b4c8] text-white' : 'text-gray-300 hover:text-white'"
+          >
+            Side-by-Side View
+          </button>
+          <button
+            @click="displayMode = 'desktop'"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+            :class="displayMode === 'desktop' ? 'bg-[#00b4c8] text-white' : 'text-gray-300 hover:text-white'"
+          >
+            Desktop Frame
+          </button>
+          <button
+            @click="displayMode = 'mobile'"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+            :class="displayMode === 'mobile' ? 'bg-[#00b4c8] text-white' : 'text-gray-300 hover:text-white'"
+          >
+            Mobile Frame
+          </button>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2">
+          <button
+            @click="showCommentsSection = !showCommentsSection"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5"
+            :class="showCommentsSection ? 'bg-cyan-600 text-white border-cyan-400 shadow' : 'bg-white/10 text-gray-200 border-white/10 hover:bg-white/20'"
+          >
+            <span>💬 មតិយោបល់ (Comments)</span>
+          </button>
+          <button
+            @click="refreshFrames"
+            class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all"
+          >
+            🔄 Reload UI
+          </button>
+          <a
+            :href="currentIframeRoute"
+            target="_blank"
+            class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow"
+          >
+            Open Full Page ↗
+          </a>
+        </div>
+      </header>
+
+      <!-- Sub-header Filter & Screen Selector -->
+      <div class="bg-[#091a2f] border-b border-white/10 px-8 py-3 space-y-2">
+        <!-- Category Filter Tabs -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1">
+          <button
+            v-for="cat in categories"
+            :key="cat.id"
+            @click="selectedCategory = cat.id as Category"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border"
+            :class="
+              selectedCategory === cat.id
+                ? 'bg-[#00b4c8] text-white border-[#00b4c8]'
+                : 'bg-white/5 text-gray-200 border-white/10 hover:bg-white/15 hover:text-white'
+            "
+          >
+            {{ cat.name }}
+          </button>
+        </div>
+
+        <!-- Screen Selector Buttons -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1">
+          <button
+            v-for="s in filteredScreens"
+            :key="s.id"
+            @click="selectScreen(s)"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border"
+            :class="
+              activeScreenId === s.id
+                ? 'bg-cyan-600 text-white border-cyan-400 font-bold ring-2 ring-cyan-400/50 shadow'
+                : 'bg-[#0d2645] text-gray-200 border-white/10 hover:bg-white/15 hover:text-white'
+            "
+          >
+            <span>{{ s.title }}</span>
+            <span
+              v-if="commentCounts[s.id] || commentCounts[s.route]"
+              class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-cyan-500 text-white"
+            >
+              💬 {{ commentCounts[s.id] || commentCounts[s.route] }}
+            </span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-black/50 text-cyan-300">
+              {{ s.route }}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Screen Header Info -->
+      <div class="bg-[#0b203a] px-8 py-3 border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <span class="px-2.5 py-0.5 rounded text-xs font-bold uppercase bg-[#00b4c8]/20 text-[#00b4c8] border border-[#00b4c8]/40">
+            {{ activeScreen.badge }}
+          </span>
+          <h2 class="text-base font-bold text-white">
+            {{ activeScreen.title }}
+          </h2>
+          <span class="text-xs text-gray-300">({{ activeScreen.description }})</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-cyan-300 bg-black/40 px-2.5 py-1 rounded font-mono border border-white/10">
+            Current Route: {{ currentIframeRoute }}
+          </span>
+          <span class="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30">
+            👤 {{ user?.name || 'Admin' }} ({{ user?.username || 'admin' }})
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOBILE COMPACT CONTROL BAR (lg:hidden) -->
+    <header class="lg:hidden sticky top-0 z-50 bg-[#0c223c] border-b border-white/15 px-3 py-2.5 flex items-center justify-between gap-2 shadow-xl">
+      <!-- App Title -->
+      <div class="flex items-center gap-2 min-w-0">
+        <div class="w-8 h-8 rounded-lg bg-[#00b4c8] flex items-center justify-center shadow flex-shrink-0">
+          <svg viewBox="0 0 32 32" fill="none" class="w-5 h-5">
             <circle cx="16" cy="11" r="7" fill="white" opacity="0.9" />
             <path d="M4 26c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.7" />
           </svg>
         </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-base font-extrabold text-white">
-              Soksomnang Real Code Showcase
-            </h1>
-            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
-              ⚡ LIVE CODE (3 BRANCHES)
-            </span>
-          </div>
-          <p class="text-xs text-cyan-300">
-            Standalone Vercel App · Dynamic Page Route & Comment Tracking 💬
-          </p>
-        </div>
+        <span class="font-extrabold text-xs text-white truncate">Soksomnang</span>
       </div>
 
-      <!-- Live User & Branch Switcher -->
-      <div class="flex flex-wrap items-center gap-1.5 bg-[#040a14] p-1.5 rounded-xl border border-white/10">
-        <span class="text-xs text-gray-300 font-semibold px-1">Switch User:</span>
-        <button
-          v-for="prof in userProfiles"
-          :key="prof.username"
-          @click="switchToUser(prof.username, prof.pass)"
-          :disabled="isLoadingAuth"
-          class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
-          :class="
-            user?.username === prof.username
-              ? 'bg-[#00b4c8] text-white shadow-md ring-2 ring-cyan-300/40'
-              : 'bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white'
-          "
+      <!-- Quick Screen Selector Dropdown -->
+      <div class="flex-1 max-w-[170px] min-w-0">
+        <select
+          :value="activeScreenId"
+          @change="(e: any) => selectScreenById(e.target.value)"
+          class="w-full bg-[#040a14] border border-cyan-400/40 text-cyan-200 text-xs font-bold rounded-lg px-2 py-1.5 focus:outline-none truncate"
         >
-          {{ prof.label }}
-        </button>
+          <option v-for="s in screens" :key="s.id" :value="s.id">
+            {{ s.title.split(' ')[0] }} ({{ s.route }})
+          </option>
+        </select>
       </div>
 
-      <!-- Viewport Display Mode Selector -->
-      <div class="flex items-center bg-[#040a14] p-1 rounded-xl border border-white/10">
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        <!-- Direct Mobile Comments Popup Toggle -->
         <button
-          @click="displayMode = 'side'"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-          :class="displayMode === 'side' ? 'bg-[#00b4c8] text-white' : 'text-gray-300 hover:text-white'"
+          @click="showCommentsModal = true"
+          class="px-2.5 py-1.5 rounded-lg bg-cyan-600/90 hover:bg-cyan-500 text-white text-xs font-bold transition-all flex items-center gap-1 shadow"
+          title="Open comments popup"
         >
-          Side-by-Side View
+          <span>💬</span>
         </button>
-        <button
-          @click="displayMode = 'desktop'"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-          :class="displayMode === 'desktop' ? 'bg-[#00b4c8] text-white' : 'text-gray-300 hover:text-white'"
-        >
-          Desktop Frame
-        </button>
-        <button
-          @click="displayMode = 'mobile'"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-          :class="displayMode === 'mobile' ? 'bg-[#00b4c8] text-white' : 'text-gray-300 hover:text-white'"
-        >
-          Mobile Frame
-        </button>
-      </div>
 
-      <!-- Action Buttons -->
-      <div class="flex items-center gap-2">
+        <!-- Controls Drawer Toggle Button -->
         <button
-          @click="showCommentsSection = !showCommentsSection"
-          class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5"
-          :class="showCommentsSection ? 'bg-cyan-600 text-white border-cyan-400 shadow' : 'bg-white/10 text-gray-200 border-white/10 hover:bg-white/20'"
+          @click="showMobileControlsDrawer = !showMobileControlsDrawer"
+          class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center gap-1"
         >
-          <span>💬 មតិយោបល់ (Comments)</span>
+          <span>⚙️ Menu</span>
         </button>
-        <button
-          @click="refreshFrames"
-          class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all"
-        >
-          🔄 Reload UI
-        </button>
-        <a
-          :href="currentIframeRoute"
-          target="_blank"
-          class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow"
-        >
-          Open Full Page ↗
-        </a>
       </div>
     </header>
 
-    <!-- Sub-header Filter & Screen Selector -->
-    <div class="bg-[#091a2f] border-b border-white/10 px-4 lg:px-8 py-3 space-y-2">
-      <!-- Category Filter Tabs -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-1">
-        <button
-          v-for="cat in categories"
-          :key="cat.id"
-          @click="selectedCategory = cat.id as Category"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border"
-          :class="
-            selectedCategory === cat.id
-              ? 'bg-[#00b4c8] text-white border-[#00b4c8]'
-              : 'bg-white/5 text-gray-200 border-white/10 hover:bg-white/15 hover:text-white'
-          "
-        >
-          {{ cat.name }}
-        </button>
-      </div>
+    <!-- MOBILE CONTROLS SLIDE-UP DRAWER MODAL -->
+    <Transition name="fade">
+      <div v-if="showMobileControlsDrawer" class="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm lg:hidden" @click.self="showMobileControlsDrawer = false">
+        <div class="w-full bg-[#0c223c] border-t border-white/20 rounded-t-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl text-xs">
+          <div class="flex items-center justify-between border-b border-white/10 pb-2">
+            <span class="font-extrabold text-sm text-cyan-300">🎛️ Showcase Controls</span>
+            <button @click="showMobileControlsDrawer = false" class="px-2.5 py-1 rounded-full bg-white/10 text-white font-bold">✕ បិទ</button>
+          </div>
 
-      <!-- Screen Selector Buttons -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-1">
-        <button
-          v-for="s in filteredScreens"
-          :key="s.id"
-          @click="selectScreen(s)"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border"
-          :class="
-            activeScreenId === s.id
-              ? 'bg-cyan-600 text-white border-cyan-400 font-bold ring-2 ring-cyan-400/50 shadow'
-              : 'bg-[#0d2645] text-gray-200 border-white/10 hover:bg-white/15 hover:text-white'
-          "
-        >
-          <span>{{ s.title }}</span>
-          <span
-            v-if="commentCounts[s.id] || commentCounts[s.route]"
-            class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-cyan-500 text-white"
-          >
-            💬 {{ commentCounts[s.id] || commentCounts[s.route] }}
-          </span>
-          <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-black/50 text-cyan-300">
-            {{ s.route }}
-          </span>
-        </button>
-      </div>
-    </div>
+          <!-- User Switcher -->
+          <div class="space-y-1.5">
+            <span class="text-gray-300 font-semibold">Switch User:</span>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button
+                v-for="prof in userProfiles"
+                :key="prof.username"
+                @click="switchToUser(prof.username, prof.pass); showMobileControlsDrawer = false"
+                class="px-2.5 py-2 rounded-lg text-xs font-bold transition-all text-left truncate"
+                :class="user?.username === prof.username ? 'bg-[#00b4c8] text-white' : 'bg-white/10 text-gray-300'"
+              >
+                {{ prof.label }}
+              </button>
+            </div>
+          </div>
 
-    <!-- Active Screen Header Info -->
-    <div class="bg-[#0b203a] px-4 lg:px-8 py-3 border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <span class="px-2.5 py-0.5 rounded text-xs font-bold uppercase bg-[#00b4c8]/20 text-[#00b4c8] border border-[#00b4c8]/40">
-          {{ activeScreen.badge }}
-        </span>
-        <h2 class="text-base font-bold text-white">
-          {{ activeScreen.title }}
-        </h2>
-        <span class="text-xs text-gray-300">({{ activeScreen.description }})</span>
-      </div>
+          <!-- Viewport Mode -->
+          <div class="space-y-1.5">
+            <span class="text-gray-300 font-semibold">Viewport Mode:</span>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button
+                @click="displayMode = 'side'; showMobileControlsDrawer = false"
+                class="py-1.5 rounded-lg text-xs font-bold transition-all text-center"
+                :class="displayMode === 'side' ? 'bg-[#00b4c8] text-white' : 'bg-white/10 text-gray-300'"
+              >Side View</button>
+              <button
+                @click="displayMode = 'desktop'; showMobileControlsDrawer = false"
+                class="py-1.5 rounded-lg text-xs font-bold transition-all text-center"
+                :class="displayMode === 'desktop' ? 'bg-[#00b4c8] text-white' : 'bg-white/10 text-gray-300'"
+              >Desktop</button>
+              <button
+                @click="displayMode = 'mobile'; showMobileControlsDrawer = false"
+                class="py-1.5 rounded-lg text-xs font-bold transition-all text-center"
+                :class="displayMode === 'mobile' ? 'bg-[#00b4c8] text-white' : 'bg-white/10 text-gray-300'"
+              >Mobile</button>
+            </div>
+          </div>
 
-      <div class="flex items-center gap-3">
-        <span class="text-xs text-cyan-300 bg-black/40 px-2.5 py-1 rounded font-mono border border-white/10">
-          Current Route: {{ currentIframeRoute }}
-        </span>
-        <span class="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30">
-          👤 {{ user?.name || 'Admin' }} ({{ user?.username || 'admin' }})
-        </span>
+          <!-- Action Links -->
+          <div class="flex items-center gap-2 pt-2 border-t border-white/10">
+            <button
+              @click="showCommentsModal = true; showMobileControlsDrawer = false"
+              class="flex-1 py-2 rounded-xl text-xs font-bold bg-cyan-600 text-white text-center shadow"
+            >
+              💬 មតិយោបល់ Popup
+            </button>
+            <a
+              :href="currentIframeRoute"
+              target="_blank"
+              class="flex-1 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white text-center"
+            >
+              Full Page ↗
+            </a>
+          </div>
+        </div>
       </div>
-    </div>
+    </Transition>
 
     <!-- Main Live Code Frames Viewport Container -->
     <main class="flex-1 p-4 lg:p-6 space-y-6">
@@ -527,22 +652,32 @@ function refreshFrames() {
           class="space-y-2"
           :class="displayMode === 'side' ? (showCommentsSection ? 'lg:col-span-3' : 'lg:col-span-4') : 'max-w-[420px] mx-auto w-full'"
         >
-          <div class="flex items-center justify-between text-xs text-gray-300 font-bold px-1">
+          <div class="hidden lg:flex items-center justify-between text-xs text-gray-300 font-bold px-1">
             <span class="text-cyan-300 flex items-center gap-1.5">
               📱 Mobile Viewport (390 × 844)
             </span>
             <span class="text-emerald-400">🟢 Responsive</span>
           </div>
 
-          <!-- Phone Outer Frame -->
-          <div class="rounded-[40px] bg-[#0c121d] p-3 border-4 border-gray-700 shadow-2xl max-w-[390px] mx-auto relative">
-            <!-- iPhone Dynamic Island -->
-            <div class="absolute top-5 left-1/2 -translate-x-1/2 w-28 h-5 bg-black rounded-full z-30 flex items-center justify-end px-3">
-              <div class="w-2 h-2 rounded-full bg-blue-900 border border-blue-400/50" />
+          <!-- Phone Outer Frame Container -->
+          <div class="rounded-2xl lg:rounded-[44px] bg-[#0c121d] p-1.5 lg:p-3 border-2 lg:border-4 border-gray-700 shadow-2xl max-w-[390px] mx-auto flex flex-col">
+            <!-- iPhone Top Status Bar & Dynamic Island (Desktop Frame only) -->
+            <div class="hidden lg:flex bg-black text-white px-5 pt-2 pb-1.5 rounded-t-[32px] items-center justify-between text-[11px] font-semibold relative select-none">
+              <span class="font-bold text-gray-200">9:41</span>
+
+              <!-- Dynamic Island Notch Pill -->
+              <div class="w-24 h-4 bg-[#141b26] rounded-full flex items-center justify-end px-2 border border-white/10">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-900 border border-blue-400/50" />
+              </div>
+
+              <div class="flex items-center gap-1 text-[10px] text-gray-300 font-mono">
+                <span>5G</span>
+                <span>🔋</span>
+              </div>
             </div>
 
             <!-- Mobile Live Iframe Container -->
-            <div class="rounded-[30px] overflow-hidden bg-white h-[740px] w-full relative shadow-inner">
+            <div class="rounded-xl lg:rounded-b-[32px] overflow-hidden bg-white h-[660px] lg:h-[720px] w-full relative shadow-inner">
               <iframe
                 ref="mobileIframeRef"
                 :key="`mobile-single-${iframeKey}`"
@@ -554,11 +689,10 @@ function refreshFrames() {
           </div>
         </div>
 
-        <!-- 💬 REALTIME COMMENTS SECTION FOR CURRENT ACTIVE ROUTE -->
+        <!-- 💬 REALTIME COMMENTS SECTION (Desktop Side-by-Side Only) -->
         <div
-          v-if="showCommentsSection"
-          class="space-y-2"
-          :class="displayMode === 'side' ? 'lg:col-span-4' : 'w-full'"
+          v-if="showCommentsSection && displayMode === 'side'"
+          class="hidden lg:block space-y-2 lg:col-span-4"
         >
           <PageCommentWidget
             :screen-id="activeScreen.id"
@@ -568,6 +702,39 @@ function refreshFrames() {
         </div>
       </div>
     </main>
+
+    <!-- 💬 REALTIME COMMENTS POPUP MODAL (Mobile & Desktop Overlay) -->
+    <Transition name="fade">
+      <div
+        v-if="showCommentsModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md"
+        @click.self="showCommentsModal = false"
+      >
+        <div class="w-full max-w-xl max-h-[90vh] flex flex-col space-y-2">
+          <!-- Top Bar with Close Button -->
+          <div class="flex items-center justify-between px-2">
+            <span class="text-xs font-extrabold text-cyan-300 flex items-center gap-1.5">
+              💬 មតិយោបល់ទំព័រ (Comments Popup)
+            </span>
+            <button
+              @click="showCommentsModal = false"
+              class="px-3 py-1 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold text-xs transition-all border border-white/20"
+            >
+              ✕ បិទ (Close)
+            </button>
+          </div>
+
+          <!-- Page Comment Widget Container -->
+          <div class="overflow-y-auto max-h-[82vh] rounded-2xl shadow-2xl">
+            <PageCommentWidget
+              :screen-id="activeScreen.id"
+              :screen-title="activeScreen.title"
+              :route="currentIframeRoute"
+            />
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Footer -->
     <footer class="border-t border-white/10 py-4 text-center text-xs text-gray-400 bg-[#040a14]">
