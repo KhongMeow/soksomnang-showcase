@@ -28,8 +28,6 @@ async function initNeonTable(sql: any) {
 }
 
 async function loadDb() {
-  if (dbCache) return dbCache
-
   const dbUrl = getDatabaseUrl()
   if (dbUrl) {
     try {
@@ -44,6 +42,8 @@ async function loadDb() {
       console.error('Failed to fetch data from Neon Postgres, using seed fallback', e)
     }
   }
+
+  if (dbCache) return dbCache
 
   dbCache = JSON.parse(JSON.stringify(seedDbData))
 
