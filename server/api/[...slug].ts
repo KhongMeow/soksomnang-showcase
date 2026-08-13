@@ -1,18 +1,88 @@
 import seedDbData from '../data/db.json'
 import fs from 'node:fs'
 import { resolve } from 'node:path'
+import { neon } from '@neondatabase/serverless'
 
-// In-memory JSON database engine with disk persistence for local dev and serverless fallback
+// Neon Postgres or Local JSON database engine with disk persistence & cloud fallback
 let dbCache: any = null
+let tableInitialized = false
 
-function loadDb() {
+function getDatabaseUrl() {
+  return process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.VERCEL_POSTGRES_URL || ''
+}
+
+async function initNeonTable(sql: any) {
+  if (tableInitialized) return
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS showcase_store (
+        key TEXT PRIMARY KEY,
+        value JSONB,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `
+    tableInitialized = true
+  } catch (e) {
+    console.error('Failed to initialize Neon Postgres table', e)
+  }
+}
+
+async function loadDb() {
   if (dbCache) return dbCache
+
+  const dbUrl = getDatabaseUrl()
+  if (dbUrl) {
+    try {
+      const sql = neon(dbUrl)
+      await initNeonTable(sql)
+      const rows = await sql`SELECT value FROM showcase_store WHERE key = 'app_db'`
+      if (rows && rows.length > 0 && rows[0].value) {
+        dbCache = rows[0].value
+        return dbCache
+      }
+    } catch (e) {
+      console.error('Failed to fetch data from Neon Postgres, using seed fallback', e)
+    }
+  }
+
   dbCache = JSON.parse(JSON.stringify(seedDbData))
+
+  if (dbUrl) {
+    try {
+      const sql = neon(dbUrl)
+      await initNeonTable(sql)
+      await sql`
+        INSERT INTO showcase_store (key, value)
+        VALUES ('app_db', ${JSON.stringify(dbCache)})
+        ON CONFLICT (key) DO NOTHING;
+      `
+    } catch (e) {
+      // Ignore seed error
+    }
+  }
+
   return dbCache
 }
 
-function saveDb(data: any) {
+async function saveDb(data: any) {
   dbCache = data
+
+  const dbUrl = getDatabaseUrl()
+  if (dbUrl) {
+    try {
+      const sql = neon(dbUrl)
+      await initNeonTable(sql)
+      await sql`
+        INSERT INTO showcase_store (key, value, updated_at)
+        VALUES ('app_db', ${JSON.stringify(data)}, NOW())
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
+      `
+      return
+    } catch (e) {
+      console.error('Failed to save data to Neon Postgres', e)
+    }
+  }
+
   try {
     const dbPath = resolve(process.cwd(), 'server/data/db.json')
     if (fs.existsSync(dbPath)) {
@@ -27,7 +97,7 @@ export default defineEventHandler(async (event) => {
   const method = event.node.req.method
   const url = event.node.req.url || ''
   const path = url.split('?')[0].replace(/^\/api/, '').replace(/\/$/, '')
-  const db = loadDb()
+  const db = await loadDb()
 
   // 🔐 Authentication Endpoints
   if (path === '/auth/login' && method === 'POST') {
@@ -170,7 +240,7 @@ export default defineEventHandler(async (event) => {
         lastPayment: new Date().toISOString().split('T')[0]
       }
       db.clients.push(newClient)
-      saveDb(db)
+      await saveDb(db)
       return newClient
     }
     return db.clients
@@ -188,7 +258,7 @@ export default defineEventHandler(async (event) => {
         totalPurchase: 0
       }
       db.suppliers.push(newSup)
-      saveDb(db)
+      await saveDb(db)
       return newSup
     }
     return db.suppliers
@@ -215,7 +285,7 @@ export default defineEventHandler(async (event) => {
           clientObj.invoices = (clientObj.invoices || 0) + 1
         }
       }
-      saveDb(db)
+      await saveDb(db)
       return newSale
     }
     return db.sales
@@ -232,7 +302,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.purchases.unshift(newPur)
-      saveDb(db)
+      await saveDb(db)
       return newPur
     }
     return db.purchases
@@ -250,7 +320,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.purchaseRequests.unshift(newReq)
-      saveDb(db)
+      await saveDb(db)
       return newReq
     }
     if (method === 'PATCH') {
@@ -259,7 +329,7 @@ export default defineEventHandler(async (event) => {
       const reqObj = db.purchaseRequests.find((r: any) => r.id === reqId)
       if (reqObj) {
         reqObj.status = body.status
-        saveDb(db)
+        await saveDb(db)
         return reqObj
       }
     }
@@ -278,7 +348,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.transfers.unshift(newTrf)
-      saveDb(db)
+      await saveDb(db)
       return newTrf
     }
     return db.transfers
@@ -294,7 +364,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.adjustments.unshift(newAdj)
-      saveDb(db)
+      await saveDb(db)
       return newAdj
     }
     return db.adjustments
@@ -310,7 +380,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.expenses.unshift(newExp)
-      saveDb(db)
+      await saveDb(db)
       return newExp
     }
     return db.expenses
@@ -327,7 +397,7 @@ export default defineEventHandler(async (event) => {
         ...body
       }
       db.payments.unshift(newPay)
-      saveDb(db)
+      await saveDb(db)
       return newPay
     }
     return db.payments
@@ -338,7 +408,7 @@ export default defineEventHandler(async (event) => {
     if (method === 'PUT' || method === 'POST') {
       const body = await readBody(event)
       db.settings = { ...db.settings, ...body }
-      saveDb(db)
+      await saveDb(db)
       return db.settings
     }
     return db.settings
@@ -369,7 +439,7 @@ export default defineEventHandler(async (event) => {
         if (!targetCm.reactions) targetCm.reactions = {}
         const type = body.reactionType || 'thumbsup'
         targetCm.reactions[type] = (targetCm.reactions[type] || 0) + 1
-        saveDb(db)
+        await saveDb(db)
         return targetCm
       }
       return { error: 'Comment not found' }
@@ -389,7 +459,7 @@ export default defineEventHandler(async (event) => {
         reactions: { thumbsup: 0, heart: 0 }
       }
       db.comments.unshift(newComment)
-      saveDb(db)
+      await saveDb(db)
       return newComment
     }
 
