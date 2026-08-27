@@ -235,6 +235,10 @@ export default defineEventHandler(async (event) => {
         id: `c${Date.now()}`,
         name: body.name,
         phone: body.phone || '',
+        branchId: body.branchId || body.branch || '',
+        branch: body.branch || '',
+        isSpecial: !!body.isSpecial,
+        customPrices: body.customPrices || {},
         debt: 0,
         invoices: 0,
         lastPayment: new Date().toISOString().split('T')[0]
@@ -242,6 +246,10 @@ export default defineEventHandler(async (event) => {
       db.clients.push(newClient)
       await saveDb(db)
       return newClient
+    }
+    const query = getQuery(event)
+    if (query.branchId) {
+      return db.clients.filter((c: any) => !c.branchId || c.branchId === query.branchId || c.branch === query.branchId)
     }
     return db.clients
   }
@@ -268,25 +276,115 @@ export default defineEventHandler(async (event) => {
   if (path === '/sales') {
     if (method === 'POST') {
       const body = await readBody(event)
-      const newSale = {
-        id: `sl${Date.now()}`,
-        invoiceNo: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
-        date: new Date().toISOString().split('T')[0],
-        ...body,
-        status: body.paid >= body.total ? 'paid' : body.paid > 0 ? 'partial' : 'credit',
-        remaining: body.total - (body.paid || 0)
-      }
-      db.sales.unshift(newSale)
+      const invoiceNo = `INV-${Math.floor(1000 + Math.random() * 9000)}`
+      const date = body.date || new Date().toISOString().split('T')[0]
+      const total = Number(body.total) || 0
+      const paid = Number(body.paid) || 0
+      const remaining = Math.max(0, total - paid)
+      const status = remaining <= 0 ? 'paid' : paid > 0 ? 'partial' : 'credit'
 
-      if (newSale.remaining > 0 && body.client) {
-        const clientObj = db.clients.find((c: any) => c.name === body.client)
-        if (clientObj) {
-          clientObj.debt = (clientObj.debt || 0) + newSale.remaining
-          clientObj.invoices = (clientObj.invoices || 0) + 1
+      const clientObj = db.clients ? db.clients.find((c: any) => c.id === body.clientId || c.name === body.client || c.id === body.client) : null
+
+      let newSales: any[] = []
+      if (body.items && Array.isArray(body.items) && body.items.length > 0) {
+        for (const it of body.items) {
+          const itemTotal = Number(it.total) || 0
+          const itemRatio = total > 0 ? itemTotal / total : 1 / body.items.length
+          const itemPaid = Math.round(paid * itemRatio * 100) / 100
+          const itemRemaining = Math.max(0, Math.round((itemTotal - itemPaid) * 100) / 100)
+
+          const s = {
+            id: `sl${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            invoiceNo,
+            date,
+            client: body.client || (clientObj ? clientObj.name : 'អតិថិជនទូទៅ'),
+            product: it.productName || it.product,
+            unit: it.unit || 'taka',
+            qty: Number(it.qty) || 0,
+            price: Number(it.price) || 0,
+            total: itemTotal,
+            status,
+            paid: itemPaid,
+            remaining: itemRemaining,
+            branch: body.branch,
+            staff: body.staff || 'Staff',
+            method: body.method || 'cash',
+          }
+          newSales.push(s)
+          db.sales.unshift(s)
+
+          // Deduct stock in db.stocks and db.products
+          if (db.stocks && Array.isArray(db.stocks)) {
+            const st = db.stocks.find((x: any) =>
+              (x.productId === it.productId || x.productId === it.product || x.productName === it.productName || x.productName === it.product) &&
+              (x.branchId === body.branch || x.branch === body.branch)
+            )
+            if (st) {
+              if (it.heads) st.heads = Math.max(0, (st.heads || 0) - Number(it.heads))
+              if (it.kg) st.kg = Math.max(0, (st.kg || 0) - Number(it.kg))
+            }
+          }
+          if (db.products && Array.isArray(db.products)) {
+            const prod = db.products.find((p: any) => p.id === it.productId || p.id === it.product || p.name === it.productName || p.name === it.product)
+            if (prod && prod.stock && prod.stock[body.branch]) {
+              if (it.heads) prod.stock[body.branch].heads = Math.max(0, (prod.stock[body.branch].heads || 0) - Number(it.heads))
+              if (it.kg) prod.stock[body.branch].kg = Math.max(0, (prod.stock[body.branch].kg || 0) - Number(it.kg))
+            }
+          }
+
+          // Auto-memorize sold price for this client at this branch
+          if (clientObj && (Number(it.price) > 0)) {
+            clientObj.customPrices = clientObj.customPrices || {}
+            const prodKey = it.productId || it.product
+            const brKey = body.branchId || body.branch
+            if (prodKey && brKey) {
+              clientObj.customPrices[`${brKey}_${prodKey}`] = Number(it.price)
+              clientObj.customPrices[prodKey] = Number(it.price)
+            }
+          }
+        }
+      } else {
+        const newSale = {
+          id: `sl${Date.now()}`,
+          invoiceNo,
+          date,
+          ...body,
+          status,
+          remaining
+        }
+        newSales.push(newSale)
+        db.sales.unshift(newSale)
+
+        if (clientObj && body.price && Number(body.price) > 0) {
+          clientObj.customPrices = clientObj.customPrices || {}
+          const prodKey = body.productId || body.product
+          const brKey = body.branchId || body.branch
+          if (prodKey && brKey) {
+            clientObj.customPrices[`${brKey}_${prodKey}`] = Number(body.price)
+            clientObj.customPrices[prodKey] = Number(body.price)
+          }
         }
       }
+
+      if (remaining > 0 && clientObj) {
+        clientObj.debt = (clientObj.debt || 0) + remaining
+        clientObj.invoices = (clientObj.invoices || 0) + 1
+      }
+
       await saveDb(db)
-      return newSale
+      return {
+        id: newSales[0]?.id || invoiceNo,
+        invoiceNo,
+        date,
+        client: body.client || (clientObj ? clientObj.name : 'អតិថិជនទូទៅ'),
+        branch: body.branch,
+        total,
+        paid,
+        remaining,
+        status,
+        items: newSales,
+        ...newSales[0]
+      }
     }
     return db.sales
   }
@@ -403,7 +501,83 @@ export default defineEventHandler(async (event) => {
     return db.payments
   }
 
-  // ⚙️ Settings
+  // ⚙️ Settings - Daily Price Matrix with History
+  if (path === '/settings/prices') {
+    const query = getQuery(event)
+    const targetDate = (query.date as string) || new Date().toISOString().slice(0, 10)
+
+    if (method === 'PUT' || method === 'POST') {
+      const body = await readBody(event)
+      const saveDate = (body?.date as string) || targetDate
+      const rows = Array.isArray(body?.rows) ? body.rows : Array.isArray(body) ? body : []
+
+      if (!db.priceHistory) db.priceHistory = []
+
+      // Remove existing rows for this date and append updated ones
+      db.priceHistory = db.priceHistory.filter((r: any) => r.date !== saveDate)
+
+      const newRows = rows.map((r: any) => ({
+        id: `pm_${r.productId || r.product?.id}_${r.branchId || r.branch?.id}_${saveDate}`,
+        date: saveDate,
+        productId: r.productId || r.product?.id,
+        branchId: r.branchId || r.branch?.id,
+        product: typeof r.product === 'object' ? r.product : db.products.find((p: any) => p.id === (r.productId || r.product)),
+        branch: typeof r.branch === 'object' ? r.branch : db.branches.find((b: any) => b.id === (r.branchId || r.branch)),
+        costPrice: Number(r.costPrice) || 0,
+        sellingPrice: Number(r.sellingPrice) || 0,
+        clientSpecialPrice: Number(r.clientSpecialPrice) || 0,
+      }))
+
+      db.priceHistory.push(...newRows)
+      db.priceMatrix = newRows // also update active matrix
+      await saveDb(db)
+      return newRows
+    }
+
+    if (!db.priceHistory) db.priceHistory = []
+
+    // 1. Look for exact date records
+    const exact = db.priceHistory.filter((r: any) => r.date === targetDate)
+    if (exact.length > 0) {
+      return exact
+    }
+
+    // 2. Look for most recent records
+    if (db.priceHistory.length > 0) {
+      const sorted = [...db.priceHistory].sort((a, b) => b.date.localeCompare(a.date))
+      const map = new Map<string, any>()
+      for (const r of sorted) {
+        const key = `${r.productId}_${r.branchId}`
+        if (!map.has(key)) {
+          map.set(key, { ...r, date: targetDate })
+        }
+      }
+      return Array.from(map.values())
+    }
+
+    // 3. Generate default price matrix if none exists
+    const matrix: any[] = []
+    for (const prod of (db.products || [])) {
+      for (const br of (db.branches || [])) {
+        matrix.push({
+          id: `pm_${prod.id}_${br.id}_${targetDate}`,
+          date: targetDate,
+          productId: prod.id,
+          branchId: br.id,
+          product: prod,
+          branch: br,
+          costPrice: Math.round(Number(prod.defaultPrice || 5) * 0.75 * 100) / 100,
+          sellingPrice: Number(prod.defaultPrice || 5),
+          clientSpecialPrice: Math.round(Number(prod.defaultPrice || 5) * 0.9 * 100) / 100,
+        })
+      }
+    }
+    db.priceHistory = matrix
+    db.priceMatrix = matrix
+    await saveDb(db)
+    return matrix
+  }
+
   if (path === '/settings') {
     if (method === 'PUT' || method === 'POST') {
       const body = await readBody(event)

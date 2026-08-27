@@ -234,6 +234,8 @@
       "id": "c1",
       "name": "ម៉ូយ ចាន់ណា",
       "phone": "012 111 222",
+      "branchId": "b1",
+      "branch": "Central ស្ទឹងមានជ័យ",
       "debt": 1500,
       "invoices": 2,
       "lastPayment": "2026-07-28"
@@ -242,6 +244,8 @@
       "id": "c2",
       "name": "ម៉ូយ ស្រីពៅ",
       "phone": "077 333 444",
+      "branchId": "b1",
+      "branch": "Central ស្ទឹងមានជ័យ",
       "debt": 800,
       "invoices": 1,
       "lastPayment": "2026-07-30"
@@ -250,6 +254,8 @@
       "id": "c3",
       "name": "ហាង សំណាង",
       "phone": "096 555 666",
+      "branchId": "b1",
+      "branch": "Central ស្ទឹងមានជ័យ",
       "debt": 3200,
       "invoices": 3,
       "lastPayment": "2026-07-25"
@@ -258,6 +264,8 @@
       "id": "c4",
       "name": "ម៉ូយ វណ្ណា",
       "phone": "011 777 888",
+      "branchId": "b1",
+      "branch": "Central ស្ទឹងមានជ័យ",
       "debt": 0,
       "invoices": 0,
       "lastPayment": "2026-08-01"
@@ -266,6 +274,8 @@
       "id": "c5",
       "name": "ហាង ចន្ទ",
       "phone": "078 999 000",
+      "branchId": "b1",
+      "branch": "Central ស្ទឹងមានជ័យ",
       "debt": 650,
       "invoices": 1,
       "lastPayment": "2026-07-29"

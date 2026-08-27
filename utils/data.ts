@@ -28,10 +28,14 @@ export interface Client {
   id: string
   name: string
   phone: string
+  branchId?: string
+  branch?: string
   debt: number
   invoices: number
   lastPayment: string
   specialPrice?: number
+  isSpecial?: boolean
+  customPrices?: Record<string, number>
 }
 
 export interface Invoice {

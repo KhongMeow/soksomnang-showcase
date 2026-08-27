@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { Branch, Product, Supplier, Client } from "~/utils/data"
+import { useSwal } from "~/composables/useSwal"
 
 definePageMeta({ middleware: ["auth", "admin"] })
 
 const router = useRouter()
 const api = useApi()
+const { alertSuccess, alertError, showToast } = useSwal()
 const activeSection = ref<string | null>(null)
 
 const CATEGORIES = [
@@ -112,30 +114,84 @@ async function saveSettings() {
   })
 }
 
-/* ── Price Configuration ── */
+/* ── Price Configuration (Daily Flexible Board with History) ── */
 const priceMatrix = ref<any[]>([])
+const selectedPriceDate = ref(new Date().toISOString().slice(0, 10))
+const selectedPriceBranch = ref("all")
+const savingPrices = ref(false)
 
-async function loadPrices() {
-  const rows = await api.get<any[]>("/settings/prices")
-  priceMatrix.value = rows.map((r) => ({
-    productId: r.product?.id ?? r.productId,
-    productName: r.product?.name ?? r.productName,
-    branchId: r.branch?.id ?? r.branchId,
-    branchName: r.branch?.name ?? r.branchName,
-    sellingPrice: r.sellingPrice,
-    clientSpecialPrice: r.clientSpecialPrice,
-  }))
+async function loadPrices(date?: string) {
+  const target = date || selectedPriceDate.value
+  selectedPriceDate.value = target
+  try {
+    const rows = await api.get<any[]>(`/settings/prices?date=${target}`)
+    priceMatrix.value = rows.map((r) => ({
+      productId: r.product?.id ?? r.productId,
+      productName: r.product?.name ?? r.productName,
+      branchId: r.branch?.id ?? r.branchId,
+      branchName: r.branch?.name ?? r.branchName,
+      costPrice: r.costPrice ?? 0,
+      sellingPrice: r.sellingPrice ?? 0,
+      clientSpecialPrice: r.clientSpecialPrice ?? 0,
+    }))
+  } catch (err) {
+    console.error("Error loading prices for date:", target, err)
+  }
 }
 
+async function copyYesterdayPrices() {
+  const d = new Date(selectedPriceDate.value)
+  d.setDate(d.getDate() - 1)
+  const yesterdayStr = d.toISOString().slice(0, 10)
+  try {
+    const yesterdayRows = await api.get<any[]>(`/settings/prices?date=${yesterdayStr}`)
+    if (yesterdayRows && yesterdayRows.length > 0) {
+      yesterdayRows.forEach((yr: any) => {
+        const yProdId = yr.product?.id ?? yr.productId
+        const yBranchId = yr.branch?.id ?? yr.branchId
+        const target = priceMatrix.value.find(
+          (m) => m.productId === yProdId && m.branchId === yBranchId
+        )
+        if (target) {
+          target.sellingPrice = yr.sellingPrice ?? target.sellingPrice
+          target.clientSpecialPrice = yr.clientSpecialPrice ?? target.clientSpecialPrice
+          target.costPrice = yr.costPrice ?? target.costPrice
+        }
+      })
+      showToast(`បានចម្លងតម្លៃពីថ្ងៃទី ${yesterdayStr} រួចរាល់`, "success")
+    } else {
+      alertError("ពុំមានទិន្នន័យ", `ពុំមានទិន្នន័យតម្លៃសម្រាប់ថ្ងៃទី ${yesterdayStr} ទេ`)
+    }
+  } catch (e: any) {
+    alertError("បរាជ័យ", "មិនអាចទាញយកតម្លៃថ្ងៃម្សិលមិញបានទេ")
+  }
+}
+
+const filteredPriceMatrix = computed(() => {
+  if (selectedPriceBranch.value === "all") return priceMatrix.value
+  return priceMatrix.value.filter((r) => r.branchId === selectedPriceBranch.value || r.branchName === selectedPriceBranch.value)
+})
+
 async function savePrices() {
-  await api.put("/settings/prices", {
-    rows: priceMatrix.value.map((r) => ({
-      productId: r.productId,
-      branchId: r.branchId,
-      sellingPrice: r.sellingPrice,
-      clientSpecialPrice: r.clientSpecialPrice,
-    })),
-  })
+  if (savingPrices.value) return
+  savingPrices.value = true
+  try {
+    await api.put("/settings/prices", {
+      date: selectedPriceDate.value,
+      rows: priceMatrix.value.map((r) => ({
+        productId: r.productId,
+        branchId: r.branchId,
+        costPrice: r.costPrice,
+        sellingPrice: r.sellingPrice,
+        clientSpecialPrice: r.clientSpecialPrice,
+      })),
+    })
+    alertSuccess("ជោគជ័យ", `បានរក្សាទុកតម្លៃលក់សម្រាប់ថ្ងៃទី ${selectedPriceDate.value} ដោយជោគជ័យ!`)
+  } catch (e: any) {
+    alertError("បរាជ័យ", e?.data?.message || "មិនអាចរក្សាទុកតម្លៃបានទេ")
+  } finally {
+    savingPrices.value = false
+  }
 }
 
 /* ── Expense Categories ── */
@@ -503,52 +559,183 @@ onMounted(async () => {
   <!-- ============================================================ -->
   <!-- PRICE CONFIGURATION -->
   <!-- ============================================================ -->
-  <div v-if="activeSection === 'price'" class="max-w-5xl mx-auto">
-    <PageHeader title="តម្លៃ" :on-back="() => activeSection = null" />
+  <!-- ============================================================ -->
+  <!-- PRICE CONFIGURATION (Daily Flexible Board with History) -->
+  <!-- ============================================================ -->
+  <div v-if="activeSection === 'price'" class="max-w-5xl mx-auto space-y-4">
+    <PageHeader title="កំណត់តម្លៃលក់ប្រចាំថ្ងៃ (Daily Flexible Selling Prices)" :on-back="() => activeSection = null" />
 
-    <Card>
-      <SectionLabel>តម្លៃតាមផលិតផលនិងសាខា</SectionLabel>
+    <!-- Date & History Toolbar Card -->
+    <Card class="bg-white border border-slate-200 shadow-xs">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <span>📅</span>
+            <span>ជ្រើសរើសថ្ងៃកំណត់តម្លៃ ឬមើលប្រវត្តិ (Date & History)</span>
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">
+            តម្លៃប្រែប្រួលជារៀងរាល់ថ្ងៃដូចប្រេងសាំង (Flexible daily prices per date)
+          </p>
+        </div>
+
+        <!-- Date Picker Controls -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <input
+            v-model="selectedPriceDate"
+            type="date"
+            @change="loadPrices(selectedPriceDate)"
+            class="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 outline-none focus:border-[#00b4c8] bg-slate-50 cursor-pointer"
+          />
+
+          <button
+            @click="loadPrices(new Date().toISOString().slice(0, 10))"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer"
+            :class="selectedPriceDate === new Date().toISOString().slice(0, 10) ? 'bg-[#0f2a4a] text-white border-[#0f2a4a]' : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-300'"
+          >
+            ថ្ងៃនេះ
+          </button>
+
+          <button
+            @click="(() => { const d = new Date(); d.setDate(d.getDate() - 1); loadPrices(d.toISOString().slice(0, 10)); })()"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer"
+            :class="selectedPriceDate === (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); })() ? 'bg-[#0f2a4a] text-white border-[#0f2a4a]' : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-300'"
+          >
+            ម្សិលមិញ
+          </button>
+        </div>
+      </div>
+
+      <!-- Secondary Bar: Branch Filter & Copy Action -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3">
+        <!-- Branch Tabs -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <button
+            @click="selectedPriceBranch = 'all'"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-colors cursor-pointer"
+            :class="selectedPriceBranch === 'all' ? 'bg-cyan-50 text-cyan-800 border border-cyan-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'"
+          >
+            គ្រប់សាខាទាំងអស់
+          </button>
+          <button
+            v-for="b in branches"
+            :key="b.id"
+            @click="selectedPriceBranch = b.id"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-colors cursor-pointer"
+            :class="selectedPriceBranch === b.id ? 'bg-cyan-50 text-cyan-800 border border-cyan-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'"
+          >
+            🏬 {{ b.name }}
+          </button>
+        </div>
+
+        <!-- Quick Copy Action -->
+        <button
+          @click="copyYesterdayPrices"
+          class="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold flex items-center gap-1.5 transition-colors self-start sm:self-auto shrink-0 cursor-pointer"
+          title="ចម្លងតម្លៃពីថ្ងៃម្សិលមិញមកដាក់ថ្ងៃនេះ"
+        >
+          <span>📋</span>
+          <span>ចម្លងតម្លៃពីម្សិលមិញ</span>
+        </button>
+      </div>
+    </Card>
+
+    <!-- Price Matrix Table Card -->
+    <Card class="bg-white border border-slate-200 shadow-xs">
+      <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <SectionLabel class="!mb-0">
+            តារាងតម្លៃប្រចាំថ្ងៃ៖ <span class="text-[#00b4c8]">{{ selectedPriceDate }}</span>
+          </SectionLabel>
+          <span
+            v-if="selectedPriceDate === new Date().toISOString().slice(0, 10)"
+            class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"
+          >
+            🟢 តម្លៃថ្ងៃនេះ (Active Today)
+          </span>
+          <span
+            v-else
+            class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"
+          >
+            📜 ប្រវត្តិតម្លៃអតីតកាល
+          </span>
+        </div>
+      </div>
+
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-gray-100">
-              <th class="text-left text-xs font-semibold text-gray-500 pb-3">ផលិតផល</th>
-              <th class="text-left text-xs font-semibold text-gray-500 pb-3">សាខា</th>
-              <th class="text-right text-xs font-semibold text-gray-500 pb-3">តម្លៃលក់ ($)</th>
-              <th class="text-right text-xs font-semibold text-gray-500 pb-3">តម្លៃពិសេស Client ($)</th>
+            <tr class="border-b border-slate-200 bg-slate-50 text-slate-600">
+              <th class="text-left text-xs font-bold py-2.5 px-3">ផលិតផល</th>
+              <th class="text-left text-xs font-bold py-2.5 px-3">សាខា</th>
+              <th class="text-right text-xs font-bold py-2.5 px-3">តម្លៃដើម ($/kg)</th>
+              <th class="text-right text-xs font-bold py-2.5 px-3">តម្លៃលក់ទូទៅ ($/kg) *</th>
+              <th class="text-right text-xs font-bold py-2.5 px-3">តម្លៃម៉ូយ VIP ($/kg) *</th>
+              <th class="text-right text-xs font-bold py-2.5 px-3">ផលចំណេញ</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-50">
-            <tr v-for="(row, i) in priceMatrix" :key="`${row.productId}-${row.branchId}`" class="hover:bg-gray-50">
-              <td class="py-3 pr-3">
-                <span v-if="i === 0 || priceMatrix[i - 1].productId !== row.productId" class="font-medium text-gray-800">{{ row.productName }}</span>
+          <tbody class="divide-y divide-slate-100">
+            <tr
+              v-for="row in filteredPriceMatrix"
+              :key="`${row.productId}-${row.branchId}`"
+              class="hover:bg-slate-50/80 transition-colors"
+            >
+              <td class="py-2.5 px-3 font-bold text-slate-800">
+                🐔 {{ row.productName }}
               </td>
-              <td class="py-3 pr-3 text-gray-600">{{ row.branchName }}</td>
-              <td class="py-3 text-right">
+              <td class="py-2.5 px-3 text-xs text-slate-600">
+                🏬 {{ row.branchName }}
+              </td>
+              <td class="py-2.5 px-3 text-right">
+                <input
+                  v-model.number="row.costPrice"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  class="w-24 px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs text-right font-semibold text-slate-600 outline-none focus:border-[#00b4c8] bg-slate-50"
+                />
+              </td>
+              <td class="py-2.5 px-3 text-right">
                 <input
                   v-model.number="row.sellingPrice"
                   type="number"
-                  class="w-24 px-3 py-2 rounded-lg border border-gray-200 text-sm text-right font-semibold text-[#0f2a4a] outline-none focus:border-[#00b4c8]"
+                  step="0.01"
+                  placeholder="0.00"
+                  class="w-28 px-2.5 py-1.5 rounded-xl border border-slate-300 text-sm text-right font-black text-[#0f2a4a] outline-none focus:border-[#00b4c8] bg-white shadow-2xs"
                 />
               </td>
-              <td class="py-3 text-right">
+              <td class="py-2.5 px-3 text-right">
                 <input
                   v-model.number="row.clientSpecialPrice"
                   type="number"
-                  class="w-24 px-3 py-2 rounded-lg border border-gray-200 text-sm text-right font-semibold text-[#ea580c] outline-none focus:border-[#00b4c8]"
+                  step="0.01"
+                  placeholder="0.00"
+                  class="w-28 px-2.5 py-1.5 rounded-xl border border-purple-200 text-sm text-right font-black text-purple-700 outline-none focus:border-purple-500 bg-purple-50/40 shadow-2xs"
                 />
+              </td>
+              <td class="py-2.5 px-3 text-right text-xs font-bold">
+                <span
+                  :class="row.sellingPrice - (row.costPrice || 0) > 0 ? 'text-emerald-600' : 'text-slate-400'"
+                >
+                  +${{ (row.sellingPrice - (row.costPrice || 0)).toFixed(2) }}
+                </span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="flex justify-end mt-4">
+      <!-- Save Button -->
+      <div class="flex items-center justify-between mt-5 pt-3 border-t border-slate-100">
+        <span class="text-xs text-slate-500">
+          តម្លៃនឹងត្រូវបានរក្សាទុកសម្រាប់កាលបរិច្ឆេទ <strong>{{ selectedPriceDate }}</strong>
+        </span>
         <button
           @click="savePrices"
-          class="px-6 py-3 rounded-xl bg-[#0f2a4a] text-white text-sm font-semibold hover:bg-[#1a4a7a] transition-colors"
+          :disabled="savingPrices"
+          class="px-6 py-2.5 rounded-xl bg-[#0f2a4a] hover:bg-[#1a4a7a] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-2 disabled:opacity-50 cursor-pointer"
         >
-          រក្សាទុកតម្លៃ
+          <span v-if="savingPrices" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <span v-else>💾 រក្សាទុកតម្លៃថ្ងៃទី {{ selectedPriceDate }}</span>
         </button>
       </div>
     </Card>
